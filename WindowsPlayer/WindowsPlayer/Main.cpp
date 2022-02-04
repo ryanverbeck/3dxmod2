@@ -59,6 +59,19 @@ ID3D11Device* unityD3D11Device = nullptr;
 IDXGIFactory* unityDXGIFactory = nullptr;
 ID3D11DeviceContext* unityD3D11ImmediateContext = nullptr;
 
+
+void RunMovie(void)
+{
+
+}
+
+
+// ==========================================================================================================
+//
+// All Code below is setup and hooks for getting custom code loaded into 3dxchat that we need.
+//
+// ==========================================================================================================
+
 // Hint that the discrete gpu should be enabled on optimus/enduro systems
 // NVIDIA docs: http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf
 // AMD forum post: http://devgurus.amd.com/thread/169965
@@ -70,6 +83,8 @@ extern "C"
 
 HRESULT(*PresentActual)(IDXGIFactory* dxgiFactory, UINT SyncInterval, UINT Flags);
 HRESULT STDMETHODCALLTYPE PresentNew(IDXGIFactory* dxgiFactory, UINT SyncInterval, UINT Flags) {
+    RunMovie();
+
     return PresentActual(dxgiFactory, SyncInterval, Flags);
 }
 
@@ -128,7 +143,7 @@ HRESULT CreateDXGIFactoryNew(REFIID riid, void** ppFactory) {
 HRESULT  (*D3D11CreateTexture2DActual)(ID3D11Device* unityD3D11Device, const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D);
 HRESULT STDMETHODCALLTYPE D3D11CreateTexture2DNew(ID3D11Device* unityD3D11Device2, const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D) {
     // The texture we are looking for is 
-    if (pDesc->Width != 1024 && pDesc->Height != 1024 && pDesc->Format != DXGI_FORMAT_BC1_UNORM_SRGB)
+    if (pDesc->Width != 1024 && pDesc->Height != 1024 || pDesc->Format == DXGI_FORMAT_BC6H_UF16)
     {
         return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
     }
