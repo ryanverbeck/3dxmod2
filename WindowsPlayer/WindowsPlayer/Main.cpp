@@ -54,15 +54,52 @@ Now that we have CreateTexture2D hooked we now have the ability to monitor textu
 #include "MinHook.h"
 #include "d3d11_vmt.h"
 #include <dxgi1_2.h>
+#include "Cinematic.h"
+
+#include <chrono>
+#include <iostream>
+#include <ctime>
 
 ID3D11Device* unityD3D11Device = nullptr;
 IDXGIFactory* unityDXGIFactory = nullptr;
 ID3D11DeviceContext* unityD3D11ImmediateContext = nullptr;
 
+Cinematic* testcinematic = nullptr;
+
+ID3D11Texture2D* streamingMovieTexture = nullptr;
+
+using std::cout; using std::endl;
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
+using std::chrono::system_clock;
 
 void RunMovie(void)
 {
+    if (streamingMovieTexture == nullptr)
+        return;
 
+    auto millisec_since_epoch = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    auto sec_since_epoch = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+
+    cinData_t data = testcinematic->ImageForTime(millisec_since_epoch);
+
+    UINT const DataSize = sizeof(FLOAT);
+    UINT const RowPitch = DataSize * data.imageWidth;
+    UINT const DepthPitch = DataSize * data.imageWidth * data.imageHeight;
+
+    D3D11_BOX Box;
+    Box.left = 0;
+    Box.right = data.imageWidth;
+    Box.top = 0;
+    Box.bottom = data.imageHeight;
+    Box.front = 0;
+    Box.back = 1;
+
+    D3D11_MAPPED_SUBRESOURCE map;
+    unityD3D11ImmediateContext->Map(streamingMovieTexture, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
+        memcpy(map.pData, data.image, DepthPitch);
+        unityD3D11ImmediateContext->Unmap(streamingMovieTexture, 0);
 }
 
 
@@ -142,13 +179,55 @@ HRESULT CreateDXGIFactoryNew(REFIID riid, void** ppFactory) {
 
 HRESULT  (*D3D11CreateTexture2DActual)(ID3D11Device* unityD3D11Device, const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D);
 HRESULT STDMETHODCALLTYPE D3D11CreateTexture2DNew(ID3D11Device* unityD3D11Device2, const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D) {
-    // The texture we are looking for is 
-    if (pDesc->Width != 1024 && pDesc->Height != 1024 || pDesc->Format == DXGI_FORMAT_BC6H_UF16)
+    static bool runMovieTest = false;
+
+    if (!runMovieTest)
     {
         return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
     }
 
-    return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
+    // The texture we are looking for is 
+    if (pDesc->Width != 256 && pDesc->Height != 256 || pDesc->Format != DXGI_FORMAT_BC3_UNORM_SRGB)
+    {
+        return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
+    }
+
+    static int stupidFuckingHack = 0;
+
+    if(stupidFuckingHack == 2)
+        return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
+
+    // Load in the movie.
+    Cinematic::InitCinematic();
+    testcinematic = Cinematic::Alloc();
+    testcinematic->InitFromFile("D:\\Projects\\3dxmod2\\Binary\\testvideo.mp4", true);
+    
+    D3D11_TEXTURE2D_DESC newDesc = *pDesc;
+
+    newDesc.Width = testcinematic->CIN_WIDTH;
+    newDesc.Height = testcinematic->CIN_HEIGHT;
+    newDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    newDesc.MipLevels = 1;
+    newDesc.ArraySize = 1;
+    newDesc.Usage = D3D11_USAGE_DYNAMIC;
+    newDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    
+    stupidFuckingHack++;
+
+    D3D11_SUBRESOURCE_DATA data;
+
+    unsigned char* tempData = new unsigned char[testcinematic->CIN_WIDTH * testcinematic->CIN_HEIGHT * 4];
+    memset(tempData, 255, testcinematic->CIN_WIDTH * testcinematic->CIN_HEIGHT * 4);
+    
+    data.pSysMem = tempData;
+    data.SysMemPitch = testcinematic->CIN_WIDTH * 4;
+    data.SysMemSlicePitch = 0;
+
+    HRESULT hr = D3D11CreateTexture2DActual(unityD3D11Device2, &newDesc, &data, ppTexture2D);
+
+    streamingMovieTexture = *ppTexture2D;
+
+    return hr;
 }
 
 // We detour D3D11CreateDevice which Unity calls to create the D3D11 rendering device. For us we just need to grab the resulting device handle.
@@ -156,7 +235,7 @@ HRESULT STDMETHODCALLTYPE D3D11CreateTexture2DNew(ID3D11Device* unityD3D11Device
 // D3D11CreateDeviceActual is the real pointer to the function and D3D11CreateDeviceNew is our detour function.
 HRESULT(*D3D11CreateDeviceActual)(IDXGIAdapter* pAdapter, D3D_DRIVER_TYPE DriverType, HMODULE Software, UINT Flags, const D3D_FEATURE_LEVEL* pFeatureLevels, UINT FeatureLevels, UINT  SDKVersion, ID3D11Device** ppDevice, D3D_FEATURE_LEVEL* pFeatureLevel, ID3D11DeviceContext** ppImmediateContext);
 HRESULT D3D11CreateDeviceNew(IDXGIAdapter* pAdapter, D3D_DRIVER_TYPE DriverType, HMODULE Software, UINT Flags, const D3D_FEATURE_LEVEL* pFeatureLevels, UINT FeatureLevels, UINT  SDKVersion, ID3D11Device** ppDevice, D3D_FEATURE_LEVEL* pFeatureLevel, ID3D11DeviceContext** ppImmediateContext) {
-    HRESULT hr = D3D11CreateDeviceActual(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels,  SDKVersion, ppDevice, pFeatureLevel, ppImmediateContext);
+    HRESULT hr = D3D11CreateDeviceActual(pAdapter, DriverType, Software, Flags | D3D11_CREATE_DEVICE_DEBUG, pFeatureLevels, FeatureLevels,  SDKVersion, ppDevice, pFeatureLevel, ppImmediateContext);
 
     // Grab the D3D11 device handle.
     unityD3D11Device = *ppDevice;
