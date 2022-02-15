@@ -77,13 +77,12 @@ using std::chrono::system_clock;
 
 void RunMovie(void)
 {
+    static float time_test = 0;
+
     if (streamingMovieTexture == nullptr)
         return;
 
-    auto millisec_since_epoch = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    auto sec_since_epoch = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
-
-    cinData_t data = testcinematic->ImageForTime(millisec_since_epoch);
+    cinData_t data = testcinematic->ImageForTime(time_test);
 
     UINT const DataSize = sizeof(FLOAT);
     UINT const RowPitch = DataSize * data.imageWidth;
@@ -99,8 +98,22 @@ void RunMovie(void)
 
    D3D11_MAPPED_SUBRESOURCE map;
    unityD3D11ImmediateContext->Map(streamingMovieTexture, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
-       memcpy(map.pData, data.image, DepthPitch);
-       unityD3D11ImmediateContext->Unmap(streamingMovieTexture, 0);
+
+   // I have to copy the texture upside down; stupid slow copy!
+   // memcpy(map.pData, data.image, DepthPitch);
+   unsigned char* gpu_data = (unsigned char *)map.pData;
+   for (int i = 0; i < data.imageWidth * data.imageHeight; i++)
+   {
+       int dest = (data.imageWidth * data.imageHeight) - i - 1;
+       gpu_data[(dest * 4) + 0] = data.image[(i * 4) + 0];
+       gpu_data[(dest * 4) + 1] = data.image[(i * 4) + 1];
+       gpu_data[(dest * 4) + 2] = data.image[(i * 4) + 2];
+       gpu_data[(dest * 4) + 3] = data.image[(i * 4) + 3];
+   }
+
+   unityD3D11ImmediateContext->Unmap(streamingMovieTexture, 0);
+
+       time_test += 16.0f;
 }
 
 
