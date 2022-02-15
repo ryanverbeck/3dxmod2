@@ -27,13 +27,14 @@ The launcher takes advantage of that and
     - Loads dxgi.dll before the engine wants to load it and hooks CreateDXGIFactory1.
               UnityPlayer.dll at 0x0000000180554F20 is were the engine actually calls CreateDXGIFactory1.
     - Hook CreateSwapChainForHwnd so we can hook the present call.
-    - 
 
 
 When D3D11CreateDevice gets called by the engine, it now calls our function instead and we grab some variables and hook CreateTexture2D 
 and call the trampolined D3D11CreateDevice call.
 
 Now that we have CreateTexture2D hooked we now have the ability to monitor textures the engine loads until we find the texture we want.
+This is just hacky fucking shit for the time being but it does work in my test map. Now that we have that we can upload our video 
+via RunMovie that runs in the hooked Present call.
 
 
 =============================================================
@@ -96,10 +97,10 @@ void RunMovie(void)
     Box.front = 0;
     Box.back = 1;
 
-    D3D11_MAPPED_SUBRESOURCE map;
-    unityD3D11ImmediateContext->Map(streamingMovieTexture, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
-        memcpy(map.pData, data.image, DepthPitch);
-        unityD3D11ImmediateContext->Unmap(streamingMovieTexture, 0);
+   D3D11_MAPPED_SUBRESOURCE map;
+   unityD3D11ImmediateContext->Map(streamingMovieTexture, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
+       memcpy(map.pData, data.image, DepthPitch);
+       unityD3D11ImmediateContext->Unmap(streamingMovieTexture, 0);
 }
 
 
@@ -177,6 +178,8 @@ HRESULT CreateDXGIFactoryNew(REFIID riid, void** ppFactory) {
     return hr;
 }
 
+bool createMovieResourceView = false;
+
 HRESULT  (*D3D11CreateTexture2DActual)(ID3D11Device* unityD3D11Device, const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D);
 HRESULT STDMETHODCALLTYPE D3D11CreateTexture2DNew(ID3D11Device* unityD3D11Device2, const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D) {
     static bool runMovieTest = false;
@@ -194,40 +197,65 @@ HRESULT STDMETHODCALLTYPE D3D11CreateTexture2DNew(ID3D11Device* unityD3D11Device
 
     static int stupidFuckingHack = 0;
 
-    if(stupidFuckingHack == 2)
-        return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
+    if (stupidFuckingHack == 0)
+    {
+        // Load in the movie.
+        Cinematic::InitCinematic();
+        testcinematic = Cinematic::Alloc();
+        testcinematic->InitFromFile("D:\\Projects\\3dxmod2\\Binary\\testvideo.mp4", true);
 
-    // Load in the movie.
-    Cinematic::InitCinematic();
-    testcinematic = Cinematic::Alloc();
-    testcinematic->InitFromFile("D:\\Projects\\3dxmod2\\Binary\\testvideo.mp4", true);
-    
-    D3D11_TEXTURE2D_DESC newDesc = *pDesc;
+        D3D11_TEXTURE2D_DESC newDesc = { };
+        newDesc.Width = testcinematic->CIN_WIDTH;
+        newDesc.Height = testcinematic->CIN_HEIGHT;
+        newDesc.MipLevels = newDesc.ArraySize = 1;
+        newDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        newDesc.SampleDesc.Count = 1;
+        newDesc.Usage = D3D11_USAGE_DYNAMIC;
+        newDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        newDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        newDesc.MiscFlags = 0;
 
-    newDesc.Width = testcinematic->CIN_WIDTH;
-    newDesc.Height = testcinematic->CIN_HEIGHT;
-    newDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    newDesc.MipLevels = 1;
-    newDesc.ArraySize = 1;
-    newDesc.Usage = D3D11_USAGE_DYNAMIC;
-    newDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    
+        D3D11_SUBRESOURCE_DATA data = { };
+
+        unsigned char* tempData = new unsigned char[testcinematic->CIN_WIDTH * testcinematic->CIN_HEIGHT * 4];
+        memset(tempData, 255, testcinematic->CIN_WIDTH * testcinematic->CIN_HEIGHT * 4);
+
+        data.pSysMem = tempData;
+        data.SysMemPitch = testcinematic->CIN_WIDTH * 4;
+        data.SysMemSlicePitch = 0;
+
+        stupidFuckingHack++;
+
+        HRESULT hr = D3D11CreateTexture2DActual(unityD3D11Device2, &newDesc, &data, ppTexture2D);
+
+        streamingMovieTexture = *ppTexture2D;
+
+        createMovieResourceView = true;
+
+        return hr;
+    }
+
     stupidFuckingHack++;
 
-    D3D11_SUBRESOURCE_DATA data;
+    return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
+}
 
-    unsigned char* tempData = new unsigned char[testcinematic->CIN_WIDTH * testcinematic->CIN_HEIGHT * 4];
-    memset(tempData, 255, testcinematic->CIN_WIDTH * testcinematic->CIN_HEIGHT * 4);
-    
-    data.pSysMem = tempData;
-    data.SysMemPitch = testcinematic->CIN_WIDTH * 4;
-    data.SysMemSlicePitch = 0;
+HRESULT (*CreateShaderResourceViewActual)(ID3D11Device* unityD3D11Device2, ID3D11Resource* pResource,const D3D11_SHADER_RESOURCE_VIEW_DESC* pDesc,ID3D11ShaderResourceView** ppSRView);
+HRESULT CreateShaderResourceViewNew(ID3D11Device* unityD3D11Device2, ID3D11Resource* pResource, const D3D11_SHADER_RESOURCE_VIEW_DESC* pDesc, ID3D11ShaderResourceView** ppSRView) {
 
-    HRESULT hr = D3D11CreateTexture2DActual(unityD3D11Device2, &newDesc, &data, ppTexture2D);
+    if (createMovieResourceView)
+    {
+        createMovieResourceView = false;
+        D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
+        shaderResourceViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+        shaderResourceViewDesc.Texture2D.MipLevels = 1;
 
-    streamingMovieTexture = *ppTexture2D;
+        return CreateShaderResourceViewActual(unityD3D11Device, pResource, &shaderResourceViewDesc, ppSRView);
+    }
 
-    return hr;
+    return CreateShaderResourceViewActual(unityD3D11Device, pResource, pDesc, ppSRView);
 }
 
 // We detour D3D11CreateDevice which Unity calls to create the D3D11 rendering device. For us we just need to grab the resulting device handle.
@@ -245,10 +273,20 @@ HRESULT D3D11CreateDeviceNew(IDXGIAdapter* pAdapter, D3D_DRIVER_TYPE DriverType,
     static bool setHook = false;
     if(!setHook)
     {
-       intptr_t** vtable = *reinterpret_cast<intptr_t***>(unityD3D11Device);// ->CreateTexture2D;
-       intptr_t* function = vtable[5];
-       MH_CreateHook(function, D3D11CreateTexture2DNew, (LPVOID*)&D3D11CreateTexture2DActual);
-       MH_EnableHook(function);
+        {
+            intptr_t** vtable = *reinterpret_cast<intptr_t***>(unityD3D11Device);// ->CreateTexture2D;
+            intptr_t* function = vtable[5];
+            MH_CreateHook(function, D3D11CreateTexture2DNew, (LPVOID*)&D3D11CreateTexture2DActual);
+            MH_EnableHook(function);
+        }
+
+        {
+            intptr_t** vtable = *reinterpret_cast<intptr_t***>(unityD3D11Device);// ->CreateTexture2D;
+            intptr_t* function = vtable[7];
+            MH_CreateHook(function, CreateShaderResourceViewNew, (LPVOID*)&CreateShaderResourceViewActual);
+            MH_EnableHook(function);
+        }
+       
 
        setHook = true;
     }
