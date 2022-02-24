@@ -74,15 +74,105 @@ Cinematic* testcinematic = nullptr;
 
 ID3D11Texture2D* streamingMovieTexture = nullptr;
 
+HWND gameWindow = nullptr;
+
 using std::cout; using std::endl;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
+//
+// returns random integer from 1 to lim (Bill's generator)
+//
+int rand3(int lim)
+{
+    static long a = time(0);
+
+    a = (((a * 214013L + 2531011L) >> 16) & 32767);
+
+    return ((a % lim) + 1);
+}
+
+const char* truthQuestionList[] = {
+    "Have you ever masturbated anywhere inappropriate? Elaborate",
+    "Describe your favourite features",
+    "Describe your least favourite features",
+    "What animal most resembles your personality",
+    "What is the stupidest thing you've done because someone dared you to",
+    "What is the stupidest thing you've done on your own free will",
+    "Rate everyone on a scale of one to ten",
+    "What is your most embarrassing memory",
+    "What was your most perverted dream",
+    "Have you ever skinny dipped",
+    "Have you ever gone a whole day without wearing underwear",
+    "If you could be born again would choose to be a different sex to what you are",
+    "If you had twenty four hours to live, what would you do, what movie star would you want to kiss, and who would you notify that you are dying",
+};
+
+enum BotCommandTypes_t {
+    BOT_COMMAND_NONE,
+    BOT_COMMAND_TRUTH
+};
+
+BotCommandTypes_t currentBotCommand = BOT_COMMAND_NONE;
+int currentProcessingNum = 0;
+int currentProcessChar = 0;
+
+const int numTruthEntries = sizeof(truthQuestionList) / sizeof(intptr_t);
+
+void RunBotCommand(void)
+{
+    if (currentBotCommand == BOT_COMMAND_NONE)
+        return;
+
+    if (currentBotCommand == BOT_COMMAND_TRUTH) {
+        int maxLen = strlen(truthQuestionList[currentProcessingNum]) + 1;
+        int vk_scan_code = tolower(truthQuestionList[currentProcessingNum][currentProcessChar]) - 'a';
+
+        if (truthQuestionList[currentProcessingNum][currentProcessChar] == ' ')
+        {
+            PostMessage(gameWindow, WM_KEYDOWN, VK_SPACE, 0);
+        }
+        else
+        {
+            PostMessage(gameWindow, WM_KEYDOWN, 0x41 + vk_scan_code, 0);
+        }
+        
+
+        currentProcessChar++;
+        if (currentProcessChar >= maxLen)
+        {
+            PostMessage(gameWindow, WM_KEYDOWN, VK_RETURN, 0);
+            currentBotCommand = BOT_COMMAND_NONE;
+            currentProcessChar = 0; // so this doesn't fuck up elsewhere.
+        }
+        return;
+    }
+}
+
 void ProcessBotCommand(const char* command)
 {
-    OutputDebugStringA(command);
+    if (currentBotCommand != BOT_COMMAND_NONE)
+    {
+        OutputDebugStringA("WARNING: Bot is current processing work! Command Ignored!");
+        return;
+    }
+
+    if (strstr(command, "#truth")) {
+        currentProcessingNum = rand3(numTruthEntries);
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+        return;
+    }
+    
+    OutputDebugStringA("WARNING: Unknown command!");
+
+    //PostMessage(gameWindow, WM_KEYDOWN, 0x41, 0);
+    //
+    //OutputDebugStringA(command);
+
+
 }
 
 void RunMovie(void)
@@ -146,6 +236,8 @@ HRESULT(*PresentActual)(IDXGIFactory* dxgiFactory, UINT SyncInterval, UINT Flags
 HRESULT STDMETHODCALLTYPE PresentNew(IDXGIFactory* dxgiFactory, UINT SyncInterval, UINT Flags) {
     RunMovie();
 
+    RunBotCommand();
+
     return PresentActual(dxgiFactory, SyncInterval, Flags);
 }
 
@@ -154,6 +246,8 @@ HRESULT CreateSwapChainForHwnd;
 HRESULT(*CreateSwapChainForHwndActual)(IDXGIFactory* factory, IUnknown* pDevice, HWND hWnd, const DXGI_SWAP_CHAIN_DESC1* pDesc, const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* pFullscreenDesc, IDXGIOutput* pRestrictToOutput, IDXGISwapChain1** ppSwapChain);
 HRESULT STDMETHODCALLTYPE CreateSwapChainForHwndNew(IDXGIFactory *factory, IUnknown* pDevice, HWND hWnd, const DXGI_SWAP_CHAIN_DESC1* pDesc, const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* pFullscreenDesc, IDXGIOutput* pRestrictToOutput, IDXGISwapChain1** ppSwapChain) {
     HRESULT hr = CreateSwapChainForHwndActual(factory, pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
+
+    gameWindow = hWnd;
 
     // Hook the present function.
     static bool setHook = false;
