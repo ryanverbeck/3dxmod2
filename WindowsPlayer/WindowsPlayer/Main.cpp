@@ -61,6 +61,11 @@ via RunMovie that runs in the hooked Present call.
 #include <iostream>
 #include <ctime>
 
+#include <shlwapi.h>
+#include <winsock2.h>
+
+#pragma comment(lib, "ws2_32.lib")
+
 ID3D11Device* unityD3D11Device = nullptr;
 IDXGIFactory* unityDXGIFactory = nullptr;
 ID3D11DeviceContext* unityD3D11ImmediateContext = nullptr;
@@ -215,7 +220,7 @@ HRESULT STDMETHODCALLTYPE D3D11CreateTexture2DNew(ID3D11Device* unityD3D11Device
         // Load in the movie.
         Cinematic::InitCinematic();
         testcinematic = Cinematic::Alloc();
-        testcinematic->InitFromFile("D:\\Projects\\3dxmod2\\Binary\\testvideo.mp4", true);
+        testcinematic->InitFromFile("D:\\Projects\\3dxmod2\\Binary\\testvideo3.mp4", true);
 
         D3D11_TEXTURE2D_DESC newDesc = { };
         newDesc.Width = testcinematic->CIN_WIDTH;
@@ -276,7 +281,7 @@ HRESULT CreateShaderResourceViewNew(ID3D11Device* unityD3D11Device2, ID3D11Resou
 // D3D11CreateDeviceActual is the real pointer to the function and D3D11CreateDeviceNew is our detour function.
 HRESULT(*D3D11CreateDeviceActual)(IDXGIAdapter* pAdapter, D3D_DRIVER_TYPE DriverType, HMODULE Software, UINT Flags, const D3D_FEATURE_LEVEL* pFeatureLevels, UINT FeatureLevels, UINT  SDKVersion, ID3D11Device** ppDevice, D3D_FEATURE_LEVEL* pFeatureLevel, ID3D11DeviceContext** ppImmediateContext);
 HRESULT D3D11CreateDeviceNew(IDXGIAdapter* pAdapter, D3D_DRIVER_TYPE DriverType, HMODULE Software, UINT Flags, const D3D_FEATURE_LEVEL* pFeatureLevels, UINT FeatureLevels, UINT  SDKVersion, ID3D11Device** ppDevice, D3D_FEATURE_LEVEL* pFeatureLevel, ID3D11DeviceContext** ppImmediateContext) {
-    HRESULT hr = D3D11CreateDeviceActual(pAdapter, DriverType, Software, Flags | D3D11_CREATE_DEVICE_DEBUG, pFeatureLevels, FeatureLevels,  SDKVersion, ppDevice, pFeatureLevel, ppImmediateContext);
+    HRESULT hr = D3D11CreateDeviceActual(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels,  SDKVersion, ppDevice, pFeatureLevel, ppImmediateContext);
 
     // Grab the D3D11 device handle.
     unityD3D11Device = *ppDevice;
@@ -324,9 +329,74 @@ void DetourDXGICreateFactory(void)
 }
 
 
+HANDLE (*CreateFileWActual)(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+HANDLE CreateFileWNew(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) {
+    // Stupid asset bundles don't load overrides.
+    //if (StrStrW(lpFileName, TEXT("man@wall_1_single_m"))) {
+    //    HANDLE hr = CreateFileWActual(L"D:\\Projects\\3dxmod2\\Binary\\AssetBundles\\animation\\ingame\\man@dance_1", dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    //
+    //    DWORD error = GetLastError();
+    //
+    //    return hr;
+    //}
+
+    return CreateFileWActual(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+}
+
+SOCKET chatSocket = 0;
+
+
+int (*connectactual)(SOCKET s,const sockaddr* name,int namelen);
+int connectnew(SOCKET s, const sockaddr* name, int namelen) {
+    sockaddr_in *_in = (sockaddr_in *)name;
+
+    if (_in->sin_port == htons(8125)) {
+        chatSocket = s;
+        return connectactual(s, name, namelen);
+    }
+
+    return connectactual(s, name, namelen);
+}
+
+int (*recvfromactual)(SOCKET s,char* buf, int len, int flags, sockaddr* from, int* fromlen);
+int recvfromnew(SOCKET s, char* buf, int len, int flags, sockaddr* from, int* fromlen) {
+    if (s == chatSocket) {
+        int ret = recvfromactual(s, buf, len, flags, from, fromlen);
+
+        return ret;
+    }
+
+    return recvfromactual(s, buf, len, flags, from, fromlen);
+}
+
+void HookConnectForGameBot(void) 
+{
+    {
+        HMODULE dxgidll = LoadLibraryA("Ws2_32.dll");
+        void* function = (LPVOID)GetProcAddress(dxgidll, "connect");
+        MH_CreateHook(function, connectnew, (LPVOID*)&connectactual);
+        MH_EnableHook(function);
+    }
+    
+    {
+        HMODULE dxgidll = LoadLibraryA("Ws2_32.dll");
+        void* function = (LPVOID)GetProcAddress(dxgidll, "recvfrom");
+        MH_CreateHook(function, recvfromnew, (LPVOID*)&recvfromactual);
+        MH_EnableHook(function);
+    }
+}
+
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd)
 {
     MH_Initialize();
+
+    HookConnectForGameBot();
+
+    {
+        void* function = (LPVOID)&CreateFileW;
+        MH_CreateHook(function, CreateFileWNew, (LPVOID*)&CreateFileWActual);
+        MH_EnableHook(function);
+    }
 
     {
         void* function = (LPVOID)GetModuleFileNameW;

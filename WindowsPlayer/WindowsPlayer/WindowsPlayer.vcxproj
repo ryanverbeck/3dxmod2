@@ -159,9 +159,11 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>$(CommonDefines);ENABLE_PROFILER=1;DEBUGMODE=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../ffmpeg-win64/include/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <OutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\3dxmod2\Binary\$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Shlwapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'!='Debug' AND '$(Configuration)'!='DebugServer'">
@@ -190,12 +192,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Cinematic.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="PrecompiledHeader.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Cinematic.h" />
     <ClInclude Include="d3d11_vmt.h" />
     <ClInclude Include="PrecompiledHeader.h" />
     <ClInclude Include="resource.h" />
@@ -207,6 +211,14 @@
     <Manifest Include="WindowsPlayer.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <Library Include="..\..\ffmpeg-win64\lib\avcodec.lib" />
+    <Library Include="..\..\ffmpeg-win64\lib\avdevice.lib" />
+    <Library Include="..\..\ffmpeg-win64\lib\avfilter.lib" />
+    <Library Include="..\..\ffmpeg-win64\lib\avformat.lib" />
+    <Library Include="..\..\ffmpeg-win64\lib\avutil.lib" />
+    <Library Include="..\..\ffmpeg-win64\lib\postproc.lib" />
+    <Library Include="..\..\ffmpeg-win64\lib\swresample.lib" />
+    <Library Include="..\..\ffmpeg-win64\lib\swscale.lib" />
     <Library Include="MinHook.x64.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
