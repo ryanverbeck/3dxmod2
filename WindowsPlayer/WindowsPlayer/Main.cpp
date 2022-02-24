@@ -80,6 +80,11 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
+void ProcessBotCommand(const char* command)
+{
+    OutputDebugStringA(command);
+}
+
 void RunMovie(void)
 {
     static float time_test = 0;
@@ -361,9 +366,19 @@ int connectnew(SOCKET s, const sockaddr* name, int namelen) {
 int (*recvfromactual)(SOCKET s,char* buf, int len, int flags, sockaddr* from, int* fromlen);
 int recvfromnew(SOCKET s, char* buf, int len, int flags, sockaddr* from, int* fromlen) {
     if (s == chatSocket) {
-        int ret = recvfromactual(s, buf, len, flags, from, fromlen);
+        int bufferSize = recvfromactual(s, buf, len, flags, from, fromlen);
 
-        return ret;
+        for (int d = bufferSize - 10; d < bufferSize; d++)
+        {
+            if (buf[d] == '#')
+            {
+                ProcessBotCommand(&buf[d]);
+                return bufferSize;
+            }
+        }
+        
+
+        return bufferSize;
     }
 
     return recvfromactual(s, buf, len, flags, from, fromlen);
