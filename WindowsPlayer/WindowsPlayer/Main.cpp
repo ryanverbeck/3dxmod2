@@ -154,7 +154,7 @@ const char* truthQuestionList[] = {
     "In a world ravaged by ______, our only solace is ______.",
     "In an attempt to reach a wider audience, the National Museum of Australia has opened an interactive exhibit on ______.",
     "In an attempt to reach a wider audience, the Smithsonian Museum of Natural History has opened an interactive exhibit on ______.",
-    "In Australia, ______ is twice as bigand twice as deadly.",
+    "In Australia, ______ is twice as big and twice as deadly.",
     "In Belmarsh Prison, word is you can trade 200 cigarettes for ______.",
     "In her latest feature - length film, Tracy Beaker struggles with ______ for the first time.",
     "In his new self - produced album, Kanye West raps over the sounds of ______.",
@@ -1693,6 +1693,32 @@ int currentProcessChar = 0;
 const int numTruthEntries = sizeof(truthQuestionList) / sizeof(intptr_t);
 const int numResponseCards = sizeof(responseCard) / sizeof(intptr_t);
 
+bool truthCardsInPlay[numTruthEntries] = { };
+bool responseCardsInPlay[numResponseCards] = { };
+
+void ResetCards(void)
+{
+    memset(&truthCardsInPlay[0], 0, sizeof(truthCardsInPlay));
+    memset(&responseCardsInPlay[0], 0, sizeof(responseCardsInPlay));
+}
+
+int RandCheck(int max, bool* table)
+{
+    for (int i = 0; i < 300; i++)
+    {
+        int r = rand3(max);
+
+        if (table[r])
+            continue;
+
+        table[r] = true;
+        return r;
+    }
+
+    ResetCards();
+    return RandCheck(max, table);
+}
+
 const char* truthMessage = nullptr;
 
 void RunBotCommand(void)
@@ -1742,7 +1768,7 @@ void ProcessBotCommand(const char* command)
     }
 
     if (strstr(command, "#card")) {
-        currentProcessingNum = rand3(numTruthEntries);
+        currentProcessingNum = RandCheck(numTruthEntries, truthCardsInPlay);
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
         truthMessage = truthQuestionList[currentProcessingNum];
@@ -1756,14 +1782,23 @@ void ProcessBotCommand(const char* command)
 
         for (int i = 0; i < 5; i++)
         {
-            responseCards += responseCard[rand3(numTruthEntries)];
+            responseCards += responseCard[RandCheck(numTruthEntries, responseCardsInPlay)];
             responseCards += " - ";
         }
 
-        currentProcessingNum = rand3(numTruthEntries);
+        currentProcessingNum = -1;
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
         truthMessage = responseCards.c_str();
+        return;
+    }
+
+    if (strstr(command, "#shuffle")) {
+        ResetCards();
+        currentProcessingNum = -1;
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+        truthMessage = "cards shuffled";
         return;
     }
     
