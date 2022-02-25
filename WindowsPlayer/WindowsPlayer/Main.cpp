@@ -65,6 +65,7 @@ via RunMovie that runs in the hooked Present call.
 #include <winsock2.h>
 
 #include <string>
+#include <random>
 
 using std::string;
 
@@ -85,18 +86,6 @@ using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
-
-//
-// returns random integer from 1 to lim (Bill's generator)
-//
-int rand3(int lim)
-{
-    static long a = time(0);
-
-    a = (((a * 214013L + 2531011L) >> 16) & 32767);
-
-    return ((a % lim) + 1);
-}
 
 const char* truthQuestionList[] = {
     "Coming to the West End this year, ______: The Musical.",
@@ -2085,30 +2074,42 @@ int currentProcessChar = 0;
 const int numTruthEntries = sizeof(truthQuestionList) / sizeof(intptr_t);
 const int numResponseCards = sizeof(responseCard) / sizeof(intptr_t);
 
-bool truthCardsInPlay[numTruthEntries] = { };
-bool responseCardsInPlay[numResponseCards] = { };
+//bool truthCardsInPlay[numTruthEntries] = { };
+//bool responseCardsInPlay[numResponseCards] = { };
+
+std::vector<int> truthCardList;
+std::vector<int> responseCardList;
+
+int currentTruthCard = 0;
+int currentResponseCard = 0;
 
 void ResetCards(void)
 {
-    memset(&truthCardsInPlay[0], 0, sizeof(truthCardsInPlay));
-    memset(&responseCardsInPlay[0], 0, sizeof(responseCardsInPlay));
-}
+    static std::random_device rd;
 
-int RandCheck(int max, bool* table)
-{
-    for (int i = 0; i < 300; i++)
+    //memset(&truthCardsInPlay[0], 0, sizeof(truthCardsInPlay));
+    //memset(&responseCardsInPlay[0], 0, sizeof(responseCardsInPlay));
+
+    truthCardList.clear();
+    responseCardList.clear();
+
+    for (int i = 0; i < numTruthEntries; i++)
+        truthCardList.push_back(i);
+
+    for (int i = 0; i < numResponseCards; i++)
+        responseCardList.push_back(i);
+
+    {        
+        std::mt19937 g(rd());
+        std::shuffle(truthCardList.begin(), truthCardList.end(), g);
+    }
     {
-        int r = rand3(max);
-
-        if (table[r])
-            continue;
-
-        table[r] = true;
-        return r;
+        std::mt19937 g(rd());
+        std::shuffle(responseCardList.begin(), responseCardList.end(), g);
     }
 
-    ResetCards();
-    return RandCheck(max, table);
+    currentTruthCard = 0;
+    currentResponseCard = 0;
 }
 
 const char* truthMessage = nullptr;
@@ -2160,7 +2161,10 @@ void ProcessBotCommand(const char* command)
     }
 
     if (strstr(command, "#card")) {
-        currentProcessingNum = RandCheck(numTruthEntries, truthCardsInPlay);
+        if (currentTruthCard >= numTruthEntries)
+            ResetCards();
+
+        currentProcessingNum = truthCardList[currentTruthCard++];
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
         truthMessage = truthQuestionList[currentProcessingNum];
@@ -2172,9 +2176,12 @@ void ProcessBotCommand(const char* command)
 
         responseCards = "";
 
+        if (currentResponseCard >= numResponseCards - 10)
+            ResetCards();
+
         for (int i = 0; i < 5; i++)
         {
-            responseCards += responseCard[RandCheck(numTruthEntries, responseCardsInPlay)];
+            responseCards += responseCard[responseCardList[currentResponseCard++]];
             responseCards += " - ";
         }
 
@@ -2525,6 +2532,8 @@ void HookConnectForGameBot(void)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd)
 {
+    ResetCards();
+
     MH_Initialize();
 
     HookConnectForGameBot();
