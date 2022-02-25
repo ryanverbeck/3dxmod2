@@ -1697,13 +1697,23 @@ const char* truthMessage = nullptr;
 
 void RunBotCommand(void)
 {
+    static bool skipFrame = false;
+
     if (currentBotCommand == BOT_COMMAND_NONE)
         return;
 
-    if (currentBotCommand == BOT_COMMAND_TRUTH) {
+    if (currentBotCommand == BOT_COMMAND_TRUTH && !skipFrame) {
         int maxLen = strlen(truthMessage) + 1;
 
-        PostMessage(gameWindow, WM_KEYDOWN, VkKeyScanExA(truthMessage[currentProcessChar], GetKeyboardLayout(0)), 0);
+        if (truthMessage[currentProcessChar] == ' ')
+        {
+            PostMessage(gameWindow, WM_KEYDOWN, VK_SPACE, 0);
+        }
+        else
+        {
+            PostMessage(gameWindow, WM_KEYDOWN, VkKeyScanExA(truthMessage[currentProcessChar], GetKeyboardLayout(0)), 0);
+        }
+        
 
         currentProcessChar++;
         if (currentProcessChar >= maxLen)
@@ -1711,9 +1721,16 @@ void RunBotCommand(void)
             PostMessage(gameWindow, WM_KEYDOWN, VK_RETURN, 0);
             currentBotCommand = BOT_COMMAND_NONE;
             currentProcessChar = 0; // so this doesn't fuck up elsewhere.
+            skipFrame = false;
+            return;
         }
+
+        skipFrame = !skipFrame;
+        
         return;
     }
+
+    skipFrame = !skipFrame;
 }
 
 void ProcessBotCommand(const char* command)
@@ -1740,7 +1757,7 @@ void ProcessBotCommand(const char* command)
         for (int i = 0; i < 5; i++)
         {
             responseCards += responseCard[rand3(numTruthEntries)];
-            responseCards += " + ";
+            responseCards += " - ";
         }
 
         currentProcessingNum = rand3(numTruthEntries);
