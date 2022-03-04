@@ -87,6 +87,112 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
+const char* truth2QuestionList[] = {
+    "What is the most sensitive part of your body?",
+    "What's a really good song to have crazy sexy too?",
+    "In 3dx describe the perfect environment to have sex in.",
+    "Who do you think in this room has the biggest penis?",
+    "Where is the most inapproriate place you have masteurbated?",
+    "Foreplay or roleplay? Explain",
+    "If you could pick anyone who you aren't with to be your sex slave who would it be",
+    "On a scale from one to ten rate your bedroom skills. Explain the reason for the score.",
+    "What are three adjectives would you use to describe a perfect kiss?",
+    "How much do you need to be paid to be in a sex magazine?",
+    "When was the last time you watched porn?",
+    "Have you ever fantasized about having sex with a teacher. If so which one.",
+    "What sexual act turns you off",
+    "What is the first thing to do if you were invisible",
+    "Which too people in this room would have you a threesome with. Describe in detail.",
+    "If you could invent a sex pleasing device what would it do.",
+    "How many times a week do you masturbate.",
+    "Were is your favorite place to be licked.",
+    "Have you ever fantasized about anyone in this room.",
+    "Who do you think has the biggest balls or boobs in this room.",
+    "Would you ever go to a nude beach. Why or why not.",
+    "Describe the sexiest underwear you.",
+    "Whats your favorite position",
+    "Are you more of a top or bottom",
+    "What was the most embarrassing thing that happened to you during sex",
+    "What is the sluttiest thing you have ever done.",
+    "Who in this room do you think would be the best in bed and why.",
+    "Have you ever faked a orgasm. Why and with who.",
+    "Would you ever have sex on a airplane with someone in this room. How would you do it.",
+    "What are the top three things that turn you on.",
+    "Have you ever peed in someones swimming pool.",
+    "What do you like to do after sex in 3dx.",
+    "Would you rather cuddle postsex or jump in a hot shower with your partner.",
+    "Who here do you think gives the best blowjob in real life.",
+    "What is your best idea of roleplay.",
+    "What is the craziest thing you have ever done in public.",
+    "Who here would you take to a public bathroom and what would you do.",
+    "What food or smell puts you in the mood.",
+    "If 3dx added kinkier clothes what would you want your partner to wear.",
+    "Tell a secret that you have never told anyone.",
+    "The group is going to tell you three names; you must rank them in order whod you have sex with.",
+    "Describe your in-bed personality in three words.",
+    "Someone gives you the name of a ugly celberaty. How far would you go for 100 1000 or 100000 dollars.",
+    "Who would you want to go down on right now; describe the scene.",
+    "If you were to make a sexy movie with someone here what would the title be.",
+    "If you could get tied up by someone in the room who would it be and what would you want them to do.",
+    "What item of clothing do you think you look the sexiest in.",
+    "Pick a celebratity and describe your hottest sex fantasy with that person.",
+    "Have you ever wanted to get your pussy or penis pierced.",
+    "How many tattoos do you have and where.",
+    "What kind of foreplay would you like to try on 3dx the next time your able too.",
+    "If you could have one sex toy in this game what would it be and who would you use it on.",
+    "What is your most embarrasing vomit story.",
+    "If you had one of the players handcuffed and blindfolded what would you so and say to them and who is it.",
+    "How did you discover masturbation.",
+    "Pretend you were going to spend a entire day in bed with someone in this room. Describe in detail how it would start and end.",
+    "What is sexy about the person closest to you.",
+    "When did you lose your viriginity and were you a top or bottom.",
+    "What do you like to be called on 3dx during sex.",
+    "If you were taking off all your clothes who would get each article of your clothing and why.",
+    "Are you a sub or dom in bed.",
+    "Who do you regret having sex with.",
+    "If you had to create a original sex position what would it be and what would you name it.",
+    "Do you like handcuffs",
+    "If you got a chance to make one of the players your slave for 24 hours who would that be and what would you make them do.",
+    "If you had to stick your hand down a players pants in the room who would it be and what would you grab.",
+    "Who here would you want to have sex with in a plane, in a car, and on a train.",
+    "What is the strangest place you've had to pee in.",
+    "Would you rather be lightly spanked in bed or have a feather run softly over your entire body.",
+    "Where is your favorite place to be touched.",
+    "Have you ever thought about a celebrity during sex. Who and why.",
+    "Which is your most irriating feature.",
+    "Where do you feel the most sexy. On the dance floor or getting cozy in the dark quiet lounge.",
+    "If someone in this room made a sex video about you and someone else in this room what would they call it and who are those people.",
+    "Does the idea of sex in public turn you on.",
+    "Describe your idea of the best foreplay.",
+    "Who would you want to preform a striptease on you in this room and what would you call it.",
+    "Pretend you a critic and give a player here that you have had sex with or want to have sex with a review of their performance in 3dx.",
+    "Which of the players do you think lost their virginity first and last.",
+    "Choose a player who you haven't had sex with. What would you like to do with with them sexual. Describe in detail.",
+    "Where do you think the sexiest place int he world is.",
+    "Pick a article of clothing that belongs to the opposite gender that you would wear and why.",
+    "What is your secret sexual talent.",
+    "What is your most embarrasing moment in 3dx so far.",
+    "Which two players in the game would you want to have double penetrating sex with.",
+    "Would you do it with someone you didn't like for money.",
+    "What is your sexiest feature.",
+    "Do you like a mouth gag.",
+    "Would you rather be tied up to a bed or a chair during sex.",
+    "Have you ever had a crush on a teacher. Who and what did you want to them.",
+    "What could happen and be a instant turn off during sex.",
+    "Have you ever thought a friends parent was hot.",
+    "What is the naughtest thing you have ever looked at online.",
+    "Have you ever gone the entire day without wearing underwear.",
+    "What is the worst rumor you have participated in.",
+    "How do you think the body of the closest person to you would look better. Shaved or natural.",
+    "If you cosplaying with the person closest to you what super hero would you both be and what would you be doing.",
+    "Who in this room would you be willing to watch porn with.",
+    "Move your hands along your lower body and describe your best feature.",
+    "What are the most attractive features about the person closest to you.",
+    "Would you ever pierce your penis or be turned on by someone who has a pierced penis.",
+    "What nether-region landscaping turns you on the most. Tottaly bare, au naturel or creatively trimmed.",
+    "Who in this room would turn you on by spanking you."    
+};
+
 const char* truthQuestionList[] = {
     "Coming to the West End this year, ______: The Musical.",
     "Crikey!I've never seen ______ like this before! Let's get a bit closer.",
@@ -2072,15 +2178,18 @@ int currentProcessingNum = 0;
 int currentProcessChar = 0;
 
 const int numTruthEntries = sizeof(truthQuestionList) / sizeof(intptr_t);
+const int numTruth2Entries = sizeof(truth2QuestionList) / sizeof(intptr_t);
 const int numResponseCards = sizeof(responseCard) / sizeof(intptr_t);
 
 //bool truthCardsInPlay[numTruthEntries] = { };
 //bool responseCardsInPlay[numResponseCards] = { };
 
 std::vector<int> truthCardList;
+std::vector<int> truthCard2List;
 std::vector<int> responseCardList;
 
 int currentTruthCard = 0;
+int currentTruth2Card = 0;
 int currentResponseCard = 0;
 
 void ResetCards(void)
@@ -2091,10 +2200,14 @@ void ResetCards(void)
     //memset(&responseCardsInPlay[0], 0, sizeof(responseCardsInPlay));
 
     truthCardList.clear();
+    truthCard2List.clear();
     responseCardList.clear();
 
     for (int i = 0; i < numTruthEntries; i++)
         truthCardList.push_back(i);
+
+    for (int i = 0; i < numTruth2Entries; i++)
+        truthCard2List.push_back(i);
 
     for (int i = 0; i < numResponseCards; i++)
         responseCardList.push_back(i);
@@ -2103,12 +2216,19 @@ void ResetCards(void)
         std::mt19937 g(rd());
         std::shuffle(truthCardList.begin(), truthCardList.end(), g);
     }
+
+    {
+        std::mt19937 g(rd());
+        std::shuffle(truthCard2List.begin(), truthCard2List.end(), g);
+    }
+
     {
         std::mt19937 g(rd());
         std::shuffle(responseCardList.begin(), responseCardList.end(), g);
     }
 
     currentTruthCard = 0;
+    currentTruth2Card = 0;
     currentResponseCard = 0;
 }
 
@@ -2168,6 +2288,17 @@ void ProcessBotCommand(const char* command)
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
         truthMessage = truthQuestionList[currentProcessingNum];
+        return;
+    }
+
+    if (strstr(command, "#truth")) {
+        if (currentTruth2Card >= numTruth2Entries)
+            ResetCards();
+
+        currentProcessingNum = truthCard2List[currentTruth2Card++];
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+        truthMessage = truth2QuestionList[currentProcessingNum];
         return;
     }
 
