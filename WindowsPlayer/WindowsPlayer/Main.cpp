@@ -109,7 +109,8 @@ const char* truth2QuestionList[] = {
     "Have you ever fantasized about anyone in this room.",
     "Who do you think has the biggest balls or boobs in this room.",
     "Would you ever go to a nude beach. Why or why not.",
-    "Describe the sexiest underwear you.",
+    "Describe the sexiest underwear you like.",
+    "What kind of underwear are you wearing now?",
     "Whats your favorite position",
     "Are you more of a top or bottom",
     "What was the most embarrassing thing that happened to you during sex",
@@ -190,7 +191,20 @@ const char* truth2QuestionList[] = {
     "What are the most attractive features about the person closest to you.",
     "Would you ever pierce your penis or be turned on by someone who has a pierced penis.",
     "What nether-region landscaping turns you on the most. Tottaly bare, au naturel or creatively trimmed.",
-    "Who in this room would turn you on by spanking you."    
+    "Who in this room would turn you on by spanking you.",
+    "Of the people playing the game, who do you think has had the most sex partners.",
+    "Do you think size matters or performance matters.",
+    "Have you ever tasted your own sperm.",
+    "Would you rather try a threesome, experience with light sadomasocism, or make a video in the sack.",
+    "Would you do a foursome or a orgy",
+    "What authority figure do you find totally hot.",
+    "If you have any costume at your disposal what would you want to dress up as during sex.",
+    "Pick someone who is playing and describe what kind of food you would like to lick off of their body.",
+    "Do you prefer to be the top or bottom.",
+    "Which do you think is hotter sex standing against a wall or bent over a table.",
+    "Describe how someone could please you with only using their tongue.",
+    "What is the kinkiest thing you have done with yourself.",
+    "How fiersty do you like it. Spanking. Scratching. Biting.",
 };
 
 const char* truthQuestionList[] = {
@@ -2234,6 +2248,29 @@ void ResetCards(void)
 
 const char* truthMessage = nullptr;
 
+void SetClipboardText(const char *msg)
+{
+    if (!OpenClipboard(NULL))
+        return;
+
+    EmptyClipboard();
+
+    size_t bufferSize = strlen(msg) + 1;
+    HGLOBAL bufferHandle = GlobalAlloc(GMEM_MOVEABLE, bufferSize * sizeof(wchar_t));
+    if (bufferHandle == NULL)
+    {
+        CloseClipboard();
+        return;
+    }
+
+    wchar_t* buffer = reinterpret_cast<wchar_t*>(GlobalLock(bufferHandle));
+    MultiByteToWideChar(CP_UTF8, 0, msg, -1, buffer, bufferSize);
+    GlobalUnlock(bufferHandle);
+
+    SetClipboardData(CF_UNICODETEXT, bufferHandle);
+    CloseClipboard();
+}
+
 void RunBotCommand(void)
 {
     static bool skipFrame = false;
@@ -2242,22 +2279,19 @@ void RunBotCommand(void)
         return;
 
     if (currentBotCommand == BOT_COMMAND_TRUTH && !skipFrame) {
-        int maxLen = strlen(truthMessage) + 1;
-
-        if (truthMessage[currentProcessChar] == ' ')
-        {
-            PostMessage(gameWindow, WM_KEYDOWN, VK_SPACE, 0);
+        if (currentProcessChar == 0) {
+            SetClipboardText(truthMessage);
         }
-        else
-        {
-            PostMessage(gameWindow, WM_KEYDOWN, VkKeyScanExA(truthMessage[currentProcessChar], GetKeyboardLayout(0)), 0);
-        }
-        
 
         currentProcessChar++;
-        if (currentProcessChar >= maxLen)
+        if (currentProcessChar == 2)
         {
-            PostMessage(gameWindow, WM_KEYDOWN, VK_RETURN, 0);
+          //  PostMessage(gameWindow, WM_KEYDOWN, VK_CONTROL, 0);
+          //  PostMessage(gameWindow, WM_KEYDOWN, VkKeyScanExA('v', GetKeyboardLayout(0)), 0);
+        }
+        if (currentProcessChar >= 3)
+        {
+            //PostMessage(gameWindow, WM_KEYDOWN, VK_RETURN, 0);
             currentBotCommand = BOT_COMMAND_NONE;
             currentProcessChar = 0; // so this doesn't fuck up elsewhere.
             skipFrame = false;
