@@ -92,7 +92,19 @@ const char *CamCards_t[] = {
     "Football | Soccer Golf |  Golf        | Baseball \n",
     "Baskball | Ice Hockey  | Sailing      | Squash   \n",
     "Tennis   | Badminton   | Motor Racing | Wrstling \n",
-    "Lacrosse | Vollyball   | Triathion    | Cycling  \n"
+    "Lacrosse | Vollyball   | Triathion    | Cycling  \n",
+
+    // Jobs
+    "Fisherman      | Lumberjack     | Nurse        | Waiter    \n",
+    "Janitor        | Secratary      | Accountant   | Teacher   \n",
+    "Truck Driver   | Security Gaurd | Chef         | Architect \n",
+    "Police Officer | Lawyer         | Carpantar    | Butcher   \n",
+
+    // Fictional Characters
+    "Indiana Jones  | Mary Poppins   | Spiderman     | Catwoman           \n",
+    "Janitor        | Wonder Woman   | Princess Leia | The Little Mermaid \n",
+    "Dracula        | Lara Croft     | Robin Hood    | Herione GRanger    \n",
+    "Super Mario    | Home Simpson   | Hercules      | Katniss Everdeen   \n"
 };
 
 const char* truth2QuestionList[] = {
@@ -2203,16 +2215,20 @@ const int numTruthEntries = sizeof(truthQuestionList) / sizeof(intptr_t);
 const int numTruth2Entries = sizeof(truth2QuestionList) / sizeof(intptr_t);
 const int numResponseCards = sizeof(responseCard) / sizeof(intptr_t);
 
+const int numCamCards = (sizeof(CamCards_t) / 4) / sizeof(intptr_t);
+
 //bool truthCardsInPlay[numTruthEntries] = { };
 //bool responseCardsInPlay[numResponseCards] = { };
 
 std::vector<int> truthCardList;
 std::vector<int> truthCard2List;
 std::vector<int> responseCardList;
+std::vector<int> camCardList;
 
 int currentTruthCard = 0;
 int currentTruth2Card = 0;
 int currentResponseCard = 0;
+int currentCamCard = 0;
 
 void ResetCards(void)
 {
@@ -2234,6 +2250,9 @@ void ResetCards(void)
     for (int i = 0; i < numResponseCards; i++)
         responseCardList.push_back(i);
 
+    for (int i = 0; i < numCamCards; i++)
+        camCardList.push_back(i);
+
     {        
         std::mt19937 g(rd());
         std::shuffle(truthCardList.begin(), truthCardList.end(), g);
@@ -2249,9 +2268,15 @@ void ResetCards(void)
         std::shuffle(responseCardList.begin(), responseCardList.end(), g);
     }
 
+    {
+        std::mt19937 g(rd());
+        std::shuffle(camCardList.begin(), camCardList.end(), g);
+    }
+
     currentTruthCard = 0;
     currentTruth2Card = 0;
     currentResponseCard = 0;
+    currentCamCard = 0;
 }
 
 const char* truthMessage = nullptr;
@@ -2323,6 +2348,27 @@ void ProcessBotCommand(const char* command)
     if (currentBotCommand != BOT_COMMAND_NONE)
     {
         OutputDebugStringA("WARNING: Bot is current processing work! Command Ignored!");
+        return;
+    }
+
+    if (strstr(command, "#camcard")) {
+        if (currentCamCard >= numCamCards)
+            ResetCards();
+
+        currentProcessingNum = camCardList[currentCamCard++];
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+
+        static std::string camStringTest;
+
+        camStringTest = "";
+
+        for (int i = 0; i < 4; i++)
+        {
+            camStringTest += CamCards_t[(currentProcessingNum * 4) + i];
+        }
+
+        truthMessage = camStringTest.c_str();
         return;
     }
 
