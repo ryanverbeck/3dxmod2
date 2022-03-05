@@ -87,6 +87,14 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
+const char *CamCards_t[] = {
+    // Sports
+    "Football | Soccer Golf |  Golf        | Baseball \n",
+    "Baskball | Ice Hockey  | Sailing      | Squash   \n",
+    "Tennis   | Badminton   | Motor Racing | Wrstling \n",
+    "Lacrosse | Vollyball   | Triathion    | Cycling  \n"
+};
+
 const char* truth2QuestionList[] = {
     "What is the most sensitive part of your body?",
     "What's a really good song to have crazy sexy too?",
@@ -2250,12 +2258,16 @@ const char* truthMessage = nullptr;
 
 void SetClipboardText(const char *msg)
 {
+    std::string msg_fixed = "\n";
+
+    msg_fixed += msg;
+
     if (!OpenClipboard(NULL))
         return;
 
     EmptyClipboard();
 
-    size_t bufferSize = strlen(msg) + 1;
+    size_t bufferSize = msg_fixed.size();
     HGLOBAL bufferHandle = GlobalAlloc(GMEM_MOVEABLE, bufferSize * sizeof(wchar_t));
     if (bufferHandle == NULL)
     {
@@ -2264,7 +2276,7 @@ void SetClipboardText(const char *msg)
     }
 
     wchar_t* buffer = reinterpret_cast<wchar_t*>(GlobalLock(bufferHandle));
-    MultiByteToWideChar(CP_UTF8, 0, msg, -1, buffer, bufferSize);
+    MultiByteToWideChar(CP_UTF8, 0, msg_fixed.c_str(), -1, buffer, bufferSize);
     GlobalUnlock(bufferHandle);
 
     SetClipboardData(CF_UNICODETEXT, bufferHandle);
@@ -2347,7 +2359,9 @@ void ProcessBotCommand(const char* command)
         for (int i = 0; i < 5; i++)
         {
             responseCards += responseCard[responseCardList[currentResponseCard++]];
-            responseCards += " - ";
+
+            if(i < 4)
+                responseCards += " | ";
         }
 
         currentProcessingNum = -1;
