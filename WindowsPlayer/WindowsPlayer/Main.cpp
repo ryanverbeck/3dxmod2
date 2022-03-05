@@ -88,23 +88,47 @@ using std::chrono::seconds;
 using std::chrono::system_clock;
 
 const char *CamCards_t[] = {
-    // Sports
+    "Sports\n",
     "Football | Soccer Golf |  Golf        | Baseball \n",
     "Baskball | Ice Hockey  | Sailing      | Squash   \n",
     "Tennis   | Badminton   | Motor Racing | Wrstling \n",
     "Lacrosse | Vollyball   | Triathion    | Cycling  \n",
 
-    // Jobs
+    "Jobs\n",
     "Fisherman      | Lumberjack     | Nurse        | Waiter    \n",
     "Janitor        | Secratary      | Accountant   | Teacher   \n",
     "Truck Driver   | Security Gaurd | Chef         | Architect \n",
     "Police Officer | Lawyer         | Carpantar    | Butcher   \n",
 
-    // Fictional Characters
+    "Fictional Characters\n",
     "Indiana Jones  | Mary Poppins   | Spiderman     | Catwoman           \n",
     "Janitor        | Wonder Woman   | Princess Leia | The Little Mermaid \n",
     "Dracula        | Lara Croft     | Robin Hood    | Herione GRanger    \n",
-    "Super Mario    | Home Simpson   | Hercules      | Katniss Everdeen   \n"
+    "Super Mario    | Home Simpson   | Hercules      | Katniss Everdeen   \n",
+
+    "Countries\n",
+    "UK      | Spain    | Japan   | Brazil     \n",
+    "France  | USA      | Italy   | Austrailia \n",
+    "Germany | Mexico   | India   | Israel     \n",
+    "Canada  | China    | Russia  | Egypt      \n",
+
+    "Civilizations\n",
+    "Romans | Eyptians  | Mayans    | Mongols    \n",
+    "Aztecs | Japaneese | Persians  | Greeks     \n",
+    "Turks  | Vikings   | Incas     | Spoanish   \n",
+    "Zulu   | Chinese   | Spartans  | Aliens     \n",
+
+    "States\n",
+    "California | Texas       | Alabama  | Hawaii      \n",
+    "Florida    | Montana     | Nevada   | Mississippi \n",
+    "Michigan   | New York    | Kentucky | Tennessee   \n",
+    "Colorado   | Washingtoon | Illnois  | Alaska      \n",
+
+    "Phobias\n",
+    "Ghosts   | Spiders | Monsters  | Rats          \n",
+    "Toilets  | Snakes  | Germs     | Clowns        \n",
+    "Needles  | Dogs    | Birds     | Insects       \n",
+    "Children | Shadows | Roller Coasters  | Planes \n",
 };
 
 const char* truth2QuestionList[] = {
@@ -2215,7 +2239,7 @@ const int numTruthEntries = sizeof(truthQuestionList) / sizeof(intptr_t);
 const int numTruth2Entries = sizeof(truth2QuestionList) / sizeof(intptr_t);
 const int numResponseCards = sizeof(responseCard) / sizeof(intptr_t);
 
-const int numCamCards = (sizeof(CamCards_t) / 4) / sizeof(intptr_t);
+const int numCamCards = (sizeof(CamCards_t) / 5) / sizeof(intptr_t);
 
 //bool truthCardsInPlay[numTruthEntries] = { };
 //bool responseCardsInPlay[numResponseCards] = { };
@@ -2363,9 +2387,9 @@ void ProcessBotCommand(const char* command)
 
         camStringTest = "";
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 5; i++)
         {
-            camStringTest += CamCards_t[(currentProcessingNum * 4) + i];
+            camStringTest += CamCards_t[(currentProcessingNum * 5) + i];
         }
 
         truthMessage = camStringTest.c_str();
