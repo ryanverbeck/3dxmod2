@@ -2367,7 +2367,7 @@ void RunBotCommand(void)
     skipFrame = !skipFrame;
 }
 
-void ProcessBotCommand(const char* command)
+void ProcessBotCommand(const char* command, const char* playerName)
 {
     if (currentBotCommand != BOT_COMMAND_NONE)
     {
@@ -2741,6 +2741,65 @@ int connectnew(SOCKET s, const sockaddr* name, int namelen) {
     return connectactual(s, name, namelen);
 }
 
+const char* FindDataInStream(const char* buffer, const char *str, int dataLen) {
+    int str_len = strlen(str);
+
+    for (int i = 0; i < dataLen; i++)
+    {
+        bool foundIt = true;
+        int currentPos = i;
+
+        for (int d = 0; d < str_len; d++)
+        {
+            if (i >= dataLen)
+                return nullptr;
+
+            if (buffer[i] != str[d])
+            {
+                foundIt = false;
+                break;
+            }
+
+            i++;
+        }
+
+        if (foundIt)
+        {
+            return &buffer[currentPos];
+        }
+    }
+
+
+    return nullptr;
+}
+
+const char* FindChatNameInPacket(char* buf, int bufferSize) {
+    static char temp[512];    
+    memset(temp, 0, sizeof(temp));
+
+    const char* name = FindDataInStream(buf, "name", bufferSize);
+    if (name == nullptr)
+    {
+        OutputDebugStringA("WARNING: Player name not found in data stream!");
+        return "";
+    }
+
+    name += 4; // skip name
+
+    name++; // unknown
+    name++; // unknown
+
+    for (int i = 0; i < 30; i++)
+    {
+        if (isalpha(name[i]))
+        {
+            temp[i] = name[i];
+        }
+    }
+
+    return temp;
+}
+
 int (*recvfromactual)(SOCKET s,char* buf, int len, int flags, sockaddr* from, int* fromlen);
 int recvfromnew(SOCKET s, char* buf, int len, int flags, sockaddr* from, int* fromlen) {
     if (s == chatSocket) {
@@ -2750,7 +2809,9 @@ int recvfromnew(SOCKET s, char* buf, int len, int flags, sockaddr* from, int* fr
         {
             if (buf[d] == '#')
             {
-                ProcessBotCommand(&buf[d]);
+                const char* playerName = FindChatNameInPacket(buf, bufferSize);
+
+                ProcessBotCommand(&buf[d], playerName);
                 return bufferSize;
             }
         }
