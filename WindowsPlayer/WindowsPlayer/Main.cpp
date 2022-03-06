@@ -2369,6 +2369,11 @@ void RunBotCommand(void)
 
 void ProcessBotCommand(const char* command, const char* playerName)
 {
+    if (playerName == nullptr)
+    {
+        playerName = "Unknown";
+    }
+
     if (currentBotCommand != BOT_COMMAND_NONE)
     {
         OutputDebugStringA("WARNING: Bot is current processing work! Command Ignored!");
@@ -2408,13 +2413,22 @@ void ProcessBotCommand(const char* command, const char* playerName)
     }
 
     if (strstr(command, "#truth")) {
+        static std::string truthResponse;
+
+        truthResponse = "TRUTH QUESTION for ";
+        truthResponse += playerName;
+        truthResponse += ": ";
+
         if (currentTruth2Card >= numTruth2Entries)
             ResetCards();
 
         currentProcessingNum = truthCard2List[currentTruth2Card++];
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
-        truthMessage = truth2QuestionList[currentProcessingNum];
+
+        truthResponse += truth2QuestionList[currentProcessingNum];
+
+        truthMessage = truthResponse.c_str();
         return;
     }
 
