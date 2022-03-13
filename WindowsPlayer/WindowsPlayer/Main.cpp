@@ -66,6 +66,7 @@ via RunMovie that runs in the hooked Present call.
 
 #include <string>
 #include <random>
+#include <unordered_map>
 
 using std::string;
 
@@ -2251,11 +2252,15 @@ std::vector<int> truthCardList;
 std::vector<int> truthCard2List;
 std::vector<int> responseCardList;
 std::vector<int> camCardList;
+std::vector<int> blackJackList;
 
 int currentTruthCard = 0;
 int currentTruth2Card = 0;
 int currentResponseCard = 0;
 int currentCamCard = 0;
+int currentBlackJackCard = 0;
+
+std::unordered_map<std::string, std::string> blackJackStorage;
 
 void ResetCards(void)
 {
@@ -2270,6 +2275,13 @@ void ResetCards(void)
     truthCardList.clear();
     truthCard2List.clear();
     responseCardList.clear();
+    blackJackList.clear();
+    blackJackStorage.clear();
+
+    for(int g = 0; g < 7; g++) // 7 decks
+        for (int i = 0; i < 13; i++) // 13 types of cards.
+            for (int f = 0; f < 4; f++) // four of each card.
+                blackJackList.push_back(i); 
 
     for (int i = 0; i < numTruthEntries; i++)
         truthCardList.push_back(i);
@@ -2282,6 +2294,11 @@ void ResetCards(void)
 
     for (int i = 0; i < numCamCards; i++)
         camCardList.push_back(i);
+
+    {
+        std::mt19937 g(rd());
+        std::shuffle(blackJackList.begin(), blackJackList.end(), g);
+    }
 
     {        
         std::mt19937 g(rd());
@@ -2307,13 +2324,17 @@ void ResetCards(void)
     currentTruth2Card = 0;
     currentResponseCard = 0;
     currentCamCard = 0;
+    currentBlackJackCard = 0;
 }
 
 const char* truthMessage = nullptr;
 
 void SetClipboardText(const char *msg)
 {
-    std::string msg_fixed = "\n";
+    std::string msg_fixed = "";
+
+    if (!strstr(msg, "/me"))
+        msg_fixed += "\n";
 
     msg_fixed += msg;
 
@@ -2380,9 +2401,148 @@ void ProcessBotCommand(const char* command, const char* playerName)
         playerName = "Unknown";
     }
 
+    std::string player_name_upper = playerName;
+    std::transform(player_name_upper.begin(), player_name_upper.end(), player_name_upper.begin(), ::toupper);
+
     if (currentBotCommand != BOT_COMMAND_NONE)
     {
         OutputDebugStringA("WARNING: Bot is current processing work! Command Ignored!");
+        return;
+    }
+
+    if (strstr(command, "#binfo")) {
+        static std::string bstring;
+
+        bstring = "/me ";
+        bstring += blackJackStorage[playerName].c_str();
+        bstring += "\n";
+
+        currentProcessingNum = -1;
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+        truthMessage = bstring.c_str();
+        return;
+    }
+
+    if (strstr(command, "#pdeal")) {
+        static std::string bstring;
+
+        bstring = "/me ";
+
+        if (currentBlackJackCard >= blackJackList.size() - 15)
+            ResetCards();
+
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+
+        int card1 = blackJackList[currentBlackJackCard++] + 1;
+        int card2 = blackJackList[currentBlackJackCard++] + 1;
+
+        bstring += player_name_upper;
+        bstring += " you have ";
+
+        if (card1 == 1)
+            bstring += "ACE";
+        else if (card1 == 11)
+            bstring += "JACK";
+        else if (card1 == 12)
+            bstring += "QUEEN";
+        else if (card1 == 13)
+            bstring += "KING";
+        else
+            bstring += std::to_string(card1);
+
+        bstring += " and ";
+
+        if (card2 == 1)
+            bstring += "ACE";
+        else if (card2 == 11)
+            bstring += "JACK";
+        else if (card2 == 12)
+            bstring += "QUEEN";
+        else if (card2 == 13)
+            bstring += "KING";
+        else
+            bstring += std::to_string(card2);
+
+        blackJackStorage[playerName] = bstring;
+
+        bstring += "\n";
+
+        truthMessage = bstring.c_str();
+
+        return;
+    }
+
+    if (strstr(command, "#ddeal")) {
+        static std::string bstring;
+        
+        bstring = "/me ";
+        bstring += player_name_upper;
+
+        if (currentBlackJackCard >= blackJackList.size() - 15)
+            ResetCards();
+
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+
+        int card1 = blackJackList[currentBlackJackCard++] + 1;
+        
+        bstring += " you have ";
+
+        if (card1 == 1)
+            bstring += "ACE";
+        else if (card1 == 11)
+            bstring += "JACK";
+        else if (card1 == 12)
+            bstring += "QUEEN";
+        else if (card1 == 13)
+            bstring += "KING";
+        else
+            bstring += std::to_string(card1);
+
+        blackJackStorage[playerName] = bstring;
+
+        bstring += "\n";
+
+        truthMessage = bstring.c_str();
+
+        return;
+    }
+
+    if (strstr(command, "#hit")) {
+        static std::string bstring;
+
+        bstring = "";
+
+        if (currentBlackJackCard >= blackJackList.size() - 15)
+            ResetCards();
+
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+
+        int card1 = blackJackList[currentBlackJackCard++] + 1;
+
+        bstring = blackJackStorage[playerName];
+        bstring += " and ";
+
+        if (card1 == 1)
+            bstring += "ACE";
+        else if (card1 == 11)
+            bstring += "JACK";
+        else if (card1 == 12)
+            bstring += "QUEEN";
+        else if (card1 == 13)
+            bstring += "KING";
+        else
+            bstring += std::to_string(card1);
+
+        blackJackStorage[playerName] = bstring;
+
+        bstring += "\n";
+
+        truthMessage = bstring.c_str();
+
         return;
     }
 
