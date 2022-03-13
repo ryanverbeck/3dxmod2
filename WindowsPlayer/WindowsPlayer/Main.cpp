@@ -88,6 +88,7 @@ using std::chrono::seconds;
 using std::chrono::system_clock;
 
 const char* lastcard = nullptr;
+std::string lastDealer = "";
 
 const char *CamCards_t[] = {
     "Sports\n",
@@ -2261,6 +2262,7 @@ void ResetCards(void)
     static std::random_device rd;
 
     lastcard = nullptr;
+    lastDealer = "";
 
     //memset(&truthCardsInPlay[0], 0, sizeof(truthCardsInPlay));
     //memset(&responseCardsInPlay[0], 0, sizeof(responseCardsInPlay));
@@ -2413,13 +2415,17 @@ void ProcessBotCommand(const char* command, const char* playerName)
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
         lastcard = truthMessage = truthQuestionList[currentProcessingNum];
+        lastDealer = playerName;
         return;
     }
 
     if (strstr(command, "#lastcard")) {
         static std::string lastCardStr;
 
-        lastCardStr = "CURRENT CARD: ";
+        lastCardStr = "DEALER ";
+        lastCardStr += lastDealer;
+        lastCardStr += ": ";
+
         if (lastcard == nullptr)
             lastCardStr += "No Previous Card";
         else
