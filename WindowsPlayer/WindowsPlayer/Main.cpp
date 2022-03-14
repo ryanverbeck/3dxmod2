@@ -2400,23 +2400,35 @@ void RunBotCommand(void)
 
 void AddBlackjackHand(std::string &bstring, const char* playerName)
 {
-    bstring += " (";
-    if (blackJackAmt1[playerName] > 21)
-        bstring += "BUST";
-    else
-        bstring += std::to_string(blackJackAmt1[playerName]);
-
-    bstring += " or ";
-
-    if (blackJackAmt2[playerName] > 21)
+    if (blackJackAmt1[playerName] != blackJackAmt2[playerName])
     {
-        bstring += "BUST";
+        bstring += " (";
+        if (blackJackAmt1[playerName] > 21)
+            bstring += "BUST";
+        else
+            bstring += std::to_string(blackJackAmt1[playerName]);
+
+        bstring += " or ";
+
+        if (blackJackAmt2[playerName] > 21)
+        {
+            bstring += "BUST";
+        }
+        else
+        {
+            bstring += std::to_string(blackJackAmt2[playerName]);
+        }
+        bstring += ")";
     }
     else
     {
-        bstring += std::to_string(blackJackAmt2[playerName]);
+        bstring += " (";
+        if (blackJackAmt1[playerName] > 21)
+            bstring += "BUST";
+        else
+            bstring += std::to_string(blackJackAmt1[playerName]);
+        bstring += ")";
     }
-    bstring += ")";
 }
 
 void ProcessBotCommand(const char* command, const char* playerName)
