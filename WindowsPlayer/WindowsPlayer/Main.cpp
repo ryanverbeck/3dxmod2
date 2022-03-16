@@ -2442,9 +2442,9 @@ void PrintTicTacBoard(void)
 
     bstring = "";
 
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 3; i++)
     {
-        sprintf(temp, "%d  %c  %c  %c  %c  %c\n", i + 1, ticTacBoard[i][0], ticTacBoard[i][1], ticTacBoard[i][2], ticTacBoard[i][3], ticTacBoard[i][4]);
+        sprintf(temp, "%d  %c  %c  %c\n", i + 1, ticTacBoard[i][0], ticTacBoard[i][1], ticTacBoard[i][2]);
         bstring += temp;
     }
 
@@ -2495,13 +2495,13 @@ void ProcessBotCommand(const char* str, const char* playerName)
         int x = atoi(parms[1].c_str()) - 1;
         int y = atoi(parms[2].c_str()) - 1;
 
-        if (x >= 5 || x < 0)
+        if (x >= 3 || x < 0)
             return;
 
-        if (y >= 5 || y < 0)
+        if (y >= 3 || y < 0)
             return;
 
-        ticTacBoard[x][y] = 'O';
+        ticTacBoard[x][y] = 'o';
         PrintTicTacBoard();
         return;
     }
@@ -2514,13 +2514,13 @@ void ProcessBotCommand(const char* str, const char* playerName)
         int x = atoi(parms[1].c_str()) - 1;
         int y = atoi(parms[2].c_str()) - 1;
 
-        if (x >= 5 || x < 0)
+        if (x >= 3 || x < 0)
             return;
 
-        if (y >= 5 || y < 0)
+        if (y >= 3 || y < 0)
             return;
 
-        ticTacBoard[x][y] = 'X';
+        ticTacBoard[x][y] = 'x';
         PrintTicTacBoard();
         return;
     }
