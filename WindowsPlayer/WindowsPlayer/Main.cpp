@@ -2454,6 +2454,81 @@ void PrintTicTacBoard(void)
     truthMessage = bstring.c_str();
 }
 
+void DealCard(std::string &bstring, int* points1, int* points2, bool dealSecondCard)
+{    
+    int card1 = blackJackList[currentBlackJackCard++] + 1;
+    int card2 = blackJackList[currentBlackJackCard++] + 1;
+
+    if (card1 == 1)
+    {
+        bstring += "ACE";
+
+        *points1 += 1;
+        *points2 += 11;
+    }
+    else if (card1 == 11)
+    {
+        bstring += "JACK";
+        *points1 += 10;
+        *points2 += 10;
+    }
+    else if (card1 == 12)
+    {
+        bstring += "QUEEN";
+        *points1 += 10;
+        *points2 += 10;
+    }
+    else if (card1 == 13)
+    {
+        bstring += "KING";
+        *points1 += 10;
+        *points2 += 10;
+    }
+    else
+    {
+        bstring += std::to_string(card1);
+        *points1 += card1;
+        *points2 += card1;
+    }
+
+    if (dealSecondCard)
+    {
+        bstring += " and ";
+
+        if (card2 == 1)
+        {
+            bstring += "ACE";
+
+            *points1 += 1;
+            *points2 += 11;
+        }
+        else if (card2 == 11)
+        {
+            bstring += "JACK";
+            *points1 += 10;
+            *points2 += 10;
+        }
+        else if (card2 == 12)
+        {
+            bstring += "QUEEN";
+            *points1 += 10;
+            *points2 += 10;
+        }
+        else if (card2 == 13)
+        {
+            bstring += "KING";
+            *points1 += 10;
+            *points2 += 10;
+        }
+        else
+        {
+            bstring += std::to_string(card2);
+            *points1 += card2;
+            *points2 += card2;
+        }
+    }
+}
+
 void ProcessBotCommand(const char* str, const char* playerName)
 {
     std::vector<string> parms;
@@ -2539,6 +2614,47 @@ void ProcessBotCommand(const char* str, const char* playerName)
         return;
     }
 
+    if (parms[0] == "#aideal") {
+        static std::string bstring;
+
+        if (parms.size() != 2)
+            return;
+
+        bstring = "/me ";
+
+        if (currentBlackJackCard >= blackJackList.size() - 15)
+            ResetCards();
+
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+
+        bstring += " AI DEALER has ";
+
+        blackJackAmt1["aidealer"] = 0;
+        blackJackAmt2["aidealer"] = 0;
+        
+        if (atoi(parms[1].c_str()) == 0)
+        {
+            DealCard(bstring, &blackJackAmt1["aidealer"], &blackJackAmt2["aidealer"], false);
+        }
+        else
+        {
+            while (blackJackAmt1["aidealer"] < 17 && blackJackAmt2["aidealer"] < 17)
+            {
+                DealCard(bstring, &blackJackAmt1["aidealer"], &blackJackAmt2["aidealer"], false);
+                bstring += " ";
+            }            
+        }
+
+        AddBlackjackHand(bstring, "aidealer");
+
+        bstring += "\n";
+
+        truthMessage = bstring.c_str();
+
+        return;
+    }
+
     if (parms[0] == "#pdeal") {
         static std::string bstring;
 
@@ -2550,80 +2666,13 @@ void ProcessBotCommand(const char* str, const char* playerName)
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
 
-        int card1 = blackJackList[currentBlackJackCard++] + 1;
-        int card2 = blackJackList[currentBlackJackCard++] + 1;
-
         bstring += player_name_upper;
         bstring += " you have ";
 
         blackJackAmt1[playerName] = 0;
         blackJackAmt2[playerName] = 0;
 
-        if (card1 == 1)
-        {
-            bstring += "ACE";
-
-            blackJackAmt1[playerName] += 1;
-            blackJackAmt2[playerName] += 11;
-        }
-        else if (card1 == 11)
-        {
-            bstring += "JACK";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else if (card1 == 12)
-        {
-            bstring += "QUEEN";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else if (card1 == 13)
-        {
-            bstring += "KING";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else
-        {
-            bstring += std::to_string(card1);
-            blackJackAmt1[playerName] += card1;
-            blackJackAmt2[playerName] += card1;
-        }
-
-        bstring += " and ";
-
-        if (card2 == 1)
-        {
-            bstring += "ACE";
-
-            blackJackAmt1[playerName] += 1;
-            blackJackAmt2[playerName] += 11;
-        }
-        else if (card2 == 11)
-        {
-            bstring += "JACK";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else if (card2 == 12)
-        {
-            bstring += "QUEEN";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else if (card2 == 13)
-        {
-            bstring += "KING";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else
-        {
-            bstring += std::to_string(card2);
-            blackJackAmt1[playerName] += card2;
-            blackJackAmt2[playerName] += card2;
-        }
+        DealCard(bstring, &blackJackAmt1[playerName], &blackJackAmt2[playerName], true);
 
         blackJackStorage[playerName] = bstring;
 
@@ -2648,43 +2697,11 @@ void ProcessBotCommand(const char* str, const char* playerName)
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
 
-        int card1 = blackJackList[currentBlackJackCard++] + 1;
-        
         blackJackAmt2[playerName] = blackJackAmt1[playerName] = 0;
 
         bstring += " you have ";
 
-        if (card1 == 1)
-        {
-            bstring += "ACE";
-
-            blackJackAmt1[playerName] += 1;
-            blackJackAmt2[playerName] += 11;
-        }
-        else if (card1 == 11)
-        {
-            bstring += "JACK";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else if (card1 == 12)
-        {
-            bstring += "QUEEN";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else if (card1 == 13)
-        {
-            bstring += "KING";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else
-        {
-            bstring += std::to_string(card1);
-            blackJackAmt1[playerName] += card1;
-            blackJackAmt2[playerName] += card1;
-        }
+        DealCard(bstring, &blackJackAmt1[playerName], &blackJackAmt2[playerName], false);
 
         blackJackStorage[playerName] = bstring;
 
@@ -2708,42 +2725,10 @@ void ProcessBotCommand(const char* str, const char* playerName)
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
 
-        int card1 = blackJackList[currentBlackJackCard++] + 1;
-
         bstring = blackJackStorage[playerName];
         bstring += " and ";
 
-        if (card1 == 1)
-        {
-            bstring += "ACE";
-
-            blackJackAmt1[playerName] += 1;
-            blackJackAmt2[playerName] += 11;
-        }
-        else if (card1 == 11)
-        {
-            bstring += "JACK";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else if (card1 == 12)
-        {
-            bstring += "QUEEN";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else if (card1 == 13)
-        {
-            bstring += "KING";
-            blackJackAmt1[playerName] += 10;
-            blackJackAmt2[playerName] += 10;
-        }
-        else
-        {
-            bstring += std::to_string(card1);
-            blackJackAmt1[playerName] += card1;
-            blackJackAmt2[playerName] += card1;
-        }
+        DealCard(bstring, &blackJackAmt1[playerName], &blackJackAmt2[playerName], false);
 
         blackJackStorage[playerName] = bstring;
 
