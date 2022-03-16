@@ -244,7 +244,7 @@ const char* truth2QuestionList[] = {
     "Do you think size matters or performance matters.",
     "Have you ever tasted your own sperm.",
     "Would you rather try a threesome, experience with light sadomasocism, or make a video in the sack.",
-    "Would you do a foursome or a orgy",
+    "Would you do a foursome or a orgy and who would be in it",
     "What authority figure do you find totally hot.",
     "If you have any costume at your disposal what would you want to dress up as during sex.",
     "Pick someone who is playing and describe what kind of food you would like to lick off of their body.",
@@ -2264,12 +2264,16 @@ std::unordered_map<std::string, std::string> blackJackStorage;
 std::unordered_map<std::string, int> blackJackAmt1;
 std::unordered_map<std::string, int> blackJackAmt2;
 
+char ticTacBoard[5][5];
+
 void ResetCards(void)
 {
     static std::random_device rd;
 
     lastcard = nullptr;
     lastDealer = "";
+
+    memset(ticTacBoard, '-', sizeof(ticTacBoard));
 
     //memset(&truthCardsInPlay[0], 0, sizeof(truthCardsInPlay));
     //memset(&responseCardsInPlay[0], 0, sizeof(responseCardsInPlay));
@@ -2431,8 +2435,29 @@ void AddBlackjackHand(std::string &bstring, const char* playerName)
     }
 }
 
-void ProcessBotCommand(const char* command, const char* playerName)
+void PrintTicTacBoard(void)
 {
+    static std::string bstring;
+    char temp[512];
+
+    bstring = "";
+
+    for (int i = 0; i < 5; i++)
+    {
+        sprintf(temp, "%d  %c  %c  %c  %c  %c\n", i + 1, ticTacBoard[i][0], ticTacBoard[i][1], ticTacBoard[i][2], ticTacBoard[i][3], ticTacBoard[i][4]);
+        bstring += temp;
+    }
+
+    currentProcessingNum = -1;
+    currentBotCommand = BOT_COMMAND_TRUTH;
+    currentProcessChar = 0;
+    truthMessage = bstring.c_str();
+}
+
+void ProcessBotCommand(const char* str, const char* playerName)
+{
+    std::vector<string> parms;
+
     if (playerName == nullptr)
     {
         playerName = "Unknown";
@@ -2447,7 +2472,60 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#binfo")) {
+    do
+    {
+        const char* begin = str;
+
+        while (*str != ' ' && *str)
+            str++;
+
+        parms.push_back(string(begin, str));
+    } while (0 != *str++);
+
+    if (parms[0] == "#tictac") {        
+        PrintTicTacBoard();
+        return;
+    }
+
+    if (parms[0] == "#seto")
+    {
+        if (parms.size() != 3)
+            return;
+
+        int x = atoi(parms[1].c_str()) - 1;
+        int y = atoi(parms[2].c_str()) - 1;
+
+        if (x >= 5 || x < 0)
+            return;
+
+        if (y >= 5 || y < 0)
+            return;
+
+        ticTacBoard[x][y] = 'O';
+        PrintTicTacBoard();
+        return;
+    }
+
+    if (parms[0] == "#setx")
+    {
+        if (parms.size() != 3)
+            return;
+
+        int x = atoi(parms[1].c_str()) - 1;
+        int y = atoi(parms[2].c_str()) - 1;
+
+        if (x >= 5 || x < 0)
+            return;
+
+        if (y >= 5 || y < 0)
+            return;
+
+        ticTacBoard[x][y] = 'X';
+        PrintTicTacBoard();
+        return;
+    }
+
+    if (parms[0] == "#binfo") {
         static std::string bstring;
 
         bstring = "/me ";
@@ -2461,7 +2539,7 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#pdeal")) {
+    if (parms[0] == "#pdeal") {
         static std::string bstring;
 
         bstring = "/me ";
@@ -2558,7 +2636,7 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#ddeal")) {
+    if (parms[0] == "#ddeal") {
         static std::string bstring;
         
         bstring = "/me ";
@@ -2619,7 +2697,7 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#hit")) {
+    if (parms[0] == "#hit") {
         static std::string bstring;
 
         bstring = "";
@@ -2678,7 +2756,7 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#camcard")) {
+    if (parms[0] == "#camcard") {
         if (currentCamCard >= numCamCards)
             ResetCards();
 
@@ -2699,7 +2777,7 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#card")) {
+    if (parms[0] == "#card") {
         if (currentTruthCard >= numTruthEntries)
             ResetCards();
 
@@ -2711,7 +2789,7 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#lastcard")) {
+    if (parms[0] == "#lastcard") {
         static std::string lastCardStr;
 
         lastCardStr = "DEALER ";
@@ -2732,7 +2810,7 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#truth")) {
+    if (parms[0] == "#truth") {
         static std::string truthResponse;
 
         truthResponse = "TRUTH QUESTION for ";
@@ -2752,7 +2830,7 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#rcard")) {
+    if (parms[0] == "#rcard") {
         static std::string responseCards;
 
         responseCards = "";
@@ -2775,7 +2853,7 @@ void ProcessBotCommand(const char* command, const char* playerName)
         return;
     }
 
-    if (strstr(command, "#shuffle")) {
+    if (parms[0] == "#shuffle") {
         ResetCards();
         currentProcessingNum = -1;
         currentBotCommand = BOT_COMMAND_TRUTH;
@@ -3144,6 +3222,8 @@ int recvfromnew(SOCKET s, char* buf, int len, int flags, sockaddr* from, int* fr
             if (buf[d] == '#')
             {
                 const char* playerName = FindChatNameInPacket(buf, bufferSize);
+
+                buf[bufferSize] = 0;
 
                 ProcessBotCommand(&buf[d], playerName);
                 return bufferSize;
