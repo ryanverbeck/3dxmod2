@@ -192,14 +192,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Cinematic.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="PrecompiledHeader.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Cinematic.h" />
     <ClInclude Include="d3d11_vmt.h" />
     <ClInclude Include="PrecompiledHeader.h" />
     <ClInclude Include="resource.h" />

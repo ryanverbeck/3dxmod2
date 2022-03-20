@@ -55,7 +55,6 @@ via RunMovie that runs in the hooked Present call.
 #include "MinHook.h"
 #include "d3d11_vmt.h"
 #include <dxgi1_2.h>
-#include "Cinematic.h"
 
 #include <chrono>
 #include <iostream>
@@ -68,6 +67,8 @@ via RunMovie that runs in the hooked Present call.
 #include <random>
 #include <unordered_map>
 
+#include <ws2tcpip.h>
+
 using std::string;
 
 #pragma comment(lib, "ws2_32.lib")
@@ -75,8 +76,6 @@ using std::string;
 ID3D11Device* unityD3D11Device = nullptr;
 IDXGIFactory* unityDXGIFactory = nullptr;
 ID3D11DeviceContext* unityD3D11ImmediateContext = nullptr;
-
-Cinematic* testcinematic = nullptr;
 
 ID3D11Texture2D* streamingMovieTexture = nullptr;
 
@@ -2252,7 +2251,20 @@ std::vector<int> truthCardList;
 std::vector<int> truthCard2List;
 std::vector<int> responseCardList;
 std::vector<int> camCardList;
-std::vector<int> blackJackList;
+
+struct BlackJackCard_t {
+    int worth;
+    char pic[512];
+};
+
+const char* card_types[] = {
+    "clubs",
+    "diamonds",
+    "hearts",
+    "spades",
+};
+
+std::vector<BlackJackCard_t> blackJackList;
 
 int currentTruthCard = 0;
 int currentTruth2Card = 0;
@@ -2260,11 +2272,46 @@ int currentResponseCard = 0;
 int currentCamCard = 0;
 int currentBlackJackCard = 0;
 
+struct CardStorage_t {
+    CardStorage_t()
+    {
+        Reset();
+    }
+
+    void Reset()
+    {
+        card1 = nullptr;
+        card2 = nullptr;
+        card3 = nullptr;
+        card4 = nullptr;
+        card5 = nullptr;
+    }
+
+    const char* card1;
+    const char* card2;
+    const char* card3;
+    const char* card4;
+    const char* card5;
+};
+
 std::unordered_map<std::string, std::string> blackJackStorage;
 std::unordered_map<std::string, int> blackJackAmt1;
 std::unordered_map<std::string, int> blackJackAmt2;
+std::unordered_map<std::string, CardStorage_t> blackJackPlayerCards;
 
 char ticTacBoard[5][5];
+
+SOCKET evilCasinoSocket;
+void WriteToEvilCasino(const char* player_name, const char* card1, const char* card2, const char* card3, const char* card4, const char* card5)
+{
+    char temp[512];
+
+    memset(temp, 0, sizeof(temp));
+
+    sprintf(temp, "%s %s %s %s %s %s", player_name, card1, card2, card3, card4, card5);
+
+    send(evilCasinoSocket, temp, strlen(temp) + 1, 0);
+}
 
 void ResetCards(void)
 {
@@ -2285,11 +2332,34 @@ void ResetCards(void)
     blackJackStorage.clear();
     blackJackAmt1.clear();
     blackJackAmt2.clear();
+    blackJackPlayerCards.clear();
 
-    for(int g = 0; g < 7; g++) // 7 decks
+    for (int g = 0; g < 7; g++) // 7 decks
+    {
         for (int i = 0; i < 13; i++) // 13 types of cards.
+        {
             for (int f = 0; f < 4; f++) // four of each card.
-                blackJackList.push_back(i); 
+            {
+                BlackJackCard_t card;
+
+                card.worth = i;
+                
+                int id = i + 1;
+                if (id == 1)
+                    sprintf(card.pic, "ace_of_%s.png", card_types[f]);
+                else if(id >= 2 && id < 11)
+                    sprintf(card.pic, "%d_of_%s.png", id, card_types[f]);
+                else if(id == 11)
+                    sprintf(card.pic, "jack_of_%s.png", card_types[f]);
+                else if (id == 12)
+                    sprintf(card.pic, "queen_of_%s.png",card_types[f]);
+                else if (id == 13)
+                    sprintf(card.pic, "king_of_%s.png", card_types[f]);
+
+                blackJackList.push_back(card);
+            }
+        }
+    }
 
     for (int i = 0; i < numTruthEntries; i++)
         truthCardList.push_back(i);
@@ -2454,10 +2524,77 @@ void PrintTicTacBoard(void)
     truthMessage = bstring.c_str();
 }
 
-void DealCard(std::string &bstring, int* points1, int* points2, bool dealSecondCard)
+void DealACardAndSync(int& card_id, const char* player_name)
+{
+    card_id = blackJackList[currentBlackJackCard].worth + 1;
+
+    const char* card1 = "none";
+    const char* card2 = "none";
+    const char* card3 = "none";
+    const char* card4 = "none";
+    const char* card5 = "none";
+    if (blackJackPlayerCards[player_name].card1 == nullptr)
+    {
+        blackJackPlayerCards[player_name].card1 = blackJackList[currentBlackJackCard].pic;
+    }
+    else if (blackJackPlayerCards[player_name].card2 == nullptr)
+    {
+        blackJackPlayerCards[player_name].card2 = blackJackList[currentBlackJackCard].pic;
+    }
+    else if (blackJackPlayerCards[player_name].card3 == nullptr)
+    {
+        blackJackPlayerCards[player_name].card3 = blackJackList[currentBlackJackCard].pic;
+    }
+    else if (blackJackPlayerCards[player_name].card4 == nullptr)
+    {
+        blackJackPlayerCards[player_name].card4 = blackJackList[currentBlackJackCard].pic;
+    }
+    else if (blackJackPlayerCards[player_name].card5 == nullptr)
+    {
+        blackJackPlayerCards[player_name].card5 = blackJackList[currentBlackJackCard].pic;
+    }
+
+    if (blackJackPlayerCards[player_name].card1 != nullptr)
+    {
+        card1 = blackJackPlayerCards[player_name].card1;
+    }
+
+    if (blackJackPlayerCards[player_name].card2 != nullptr)
+    {
+        card2 = blackJackPlayerCards[player_name].card2;
+    }
+
+    if (blackJackPlayerCards[player_name].card3 != nullptr)
+    {
+        card3 = blackJackPlayerCards[player_name].card3;
+    }
+
+    if (blackJackPlayerCards[player_name].card4 != nullptr)
+    {
+        card4 = blackJackPlayerCards[player_name].card4;
+    }
+
+    if (blackJackPlayerCards[player_name].card5 != nullptr)
+    {
+        card5 = blackJackPlayerCards[player_name].card5;
+    }
+
+    WriteToEvilCasino(player_name, card1, card2, card3, card4, card5);
+
+    currentBlackJackCard++;
+}
+
+void DealCard(const char *player_name, std::string &bstring, int* points1, int* points2, bool dealSecondCard)
 {    
-    int card1 = blackJackList[currentBlackJackCard++] + 1;
-    int card2 = blackJackList[currentBlackJackCard++] + 1;
+    int card1 = 0;
+    int card2 = 0;
+
+    DealACardAndSync(card1, player_name);
+
+    if (dealSecondCard)
+    {
+        DealACardAndSync(card2, player_name);
+    }
 
     if (card1 == 1)
     {
@@ -2635,13 +2772,13 @@ void ProcessBotCommand(const char* str, const char* playerName)
         
         if (atoi(parms[1].c_str()) == 0)
         {
-            DealCard(bstring, &blackJackAmt1["aidealer"], &blackJackAmt2["aidealer"], false);
+            DealCard(playerName, bstring, &blackJackAmt1["aidealer"], &blackJackAmt2["aidealer"], false);
         }
         else
         {
             while (blackJackAmt1["aidealer"] < 17 && blackJackAmt2["aidealer"] < 17)
             {
-                DealCard(bstring, &blackJackAmt1["aidealer"], &blackJackAmt2["aidealer"], false);
+                DealCard(playerName, bstring, &blackJackAmt1["aidealer"], &blackJackAmt2["aidealer"], false);
                 bstring += " ";
             }            
         }
@@ -2672,9 +2809,11 @@ void ProcessBotCommand(const char* str, const char* playerName)
         blackJackAmt1[playerName] = 0;
         blackJackAmt2[playerName] = 0;
 
-        DealCard(bstring, &blackJackAmt1[playerName], &blackJackAmt2[playerName], true);
+        blackJackPlayerCards[playerName].Reset();
 
-        blackJackStorage[playerName] = bstring;
+        DealCard(playerName, bstring, &blackJackAmt1[playerName], &blackJackAmt2[playerName], true);
+
+        blackJackStorage[playerName] = bstring;        
 
         AddBlackjackHand(bstring, playerName);
 
@@ -2701,7 +2840,7 @@ void ProcessBotCommand(const char* str, const char* playerName)
 
         bstring += " you have ";
 
-        DealCard(bstring, &blackJackAmt1[playerName], &blackJackAmt2[playerName], false);
+        DealCard(playerName, bstring, &blackJackAmt1[playerName], &blackJackAmt2[playerName], false);
 
         blackJackStorage[playerName] = bstring;
 
@@ -2728,7 +2867,7 @@ void ProcessBotCommand(const char* str, const char* playerName)
         bstring = blackJackStorage[playerName];
         bstring += " and ";
 
-        DealCard(bstring, &blackJackAmt1[playerName], &blackJackAmt2[playerName], false);
+        DealCard(playerName, bstring, &blackJackAmt1[playerName], &blackJackAmt2[playerName], false);
 
         blackJackStorage[playerName] = bstring;
 
@@ -2858,43 +2997,7 @@ void ProcessBotCommand(const char* str, const char* playerName)
 
 void RunMovie(void)
 {
-    static float time_test = 0;
-
-    if (streamingMovieTexture == nullptr)
-        return;
-
-    cinData_t data = testcinematic->ImageForTime(time_test);
-
-    UINT const DataSize = sizeof(FLOAT);
-    UINT const RowPitch = DataSize * data.imageWidth;
-    UINT const DepthPitch = DataSize * data.imageWidth * data.imageHeight;
-
-    D3D11_BOX Box;
-    Box.left = 0;
-    Box.right = data.imageWidth;
-    Box.top = 0;
-    Box.bottom = data.imageHeight;
-    Box.front = 0;
-    Box.back = 1;
-
-   D3D11_MAPPED_SUBRESOURCE map;
-   unityD3D11ImmediateContext->Map(streamingMovieTexture, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
-
-   // I have to copy the texture upside down; stupid slow copy!
-   // memcpy(map.pData, data.image, DepthPitch);
-   unsigned char* gpu_data = (unsigned char *)map.pData;
-   for (int i = 0; i < data.imageWidth * data.imageHeight; i++)
-   {
-       int dest = (data.imageWidth * data.imageHeight) - i - 1;
-       gpu_data[(dest * 4) + 0] = data.image[(i * 4) + 0];
-       gpu_data[(dest * 4) + 1] = data.image[(i * 4) + 1];
-       gpu_data[(dest * 4) + 2] = data.image[(i * 4) + 2];
-       gpu_data[(dest * 4) + 3] = data.image[(i * 4) + 3];
-   }
-
-   unityD3D11ImmediateContext->Unmap(streamingMovieTexture, 0);
-
-       time_test += 16.0f;
+    
 }
 
 
@@ -2976,86 +3079,6 @@ HRESULT CreateDXGIFactoryNew(REFIID riid, void** ppFactory) {
     return hr;
 }
 
-bool createMovieResourceView = false;
-
-HRESULT  (*D3D11CreateTexture2DActual)(ID3D11Device* unityD3D11Device, const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D);
-HRESULT STDMETHODCALLTYPE D3D11CreateTexture2DNew(ID3D11Device* unityD3D11Device2, const D3D11_TEXTURE2D_DESC* pDesc, const D3D11_SUBRESOURCE_DATA* pInitialData, ID3D11Texture2D** ppTexture2D) {
-    static bool runMovieTest = false;
-
-    if (!runMovieTest)
-    {
-        return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
-    }
-
-    // The texture we are looking for is 
-    if (pDesc->Width != 256 && pDesc->Height != 256 || pDesc->Format != DXGI_FORMAT_BC3_UNORM_SRGB)
-    {
-        return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
-    }
-
-    static int stupidFuckingHack = 0;
-
-    if (stupidFuckingHack == 0)
-    {
-        // Load in the movie.
-        Cinematic::InitCinematic();
-        testcinematic = Cinematic::Alloc();
-        testcinematic->InitFromFile("D:\\Projects\\3dxmod2\\Binary\\testvideo3.mp4", true);
-
-        D3D11_TEXTURE2D_DESC newDesc = { };
-        newDesc.Width = testcinematic->CIN_WIDTH;
-        newDesc.Height = testcinematic->CIN_HEIGHT;
-        newDesc.MipLevels = newDesc.ArraySize = 1;
-        newDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        newDesc.SampleDesc.Count = 1;
-        newDesc.Usage = D3D11_USAGE_DYNAMIC;
-        newDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        newDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        newDesc.MiscFlags = 0;
-
-        D3D11_SUBRESOURCE_DATA data = { };
-
-        unsigned char* tempData = new unsigned char[testcinematic->CIN_WIDTH * testcinematic->CIN_HEIGHT * 4];
-        memset(tempData, 255, testcinematic->CIN_WIDTH * testcinematic->CIN_HEIGHT * 4);
-
-        data.pSysMem = tempData;
-        data.SysMemPitch = testcinematic->CIN_WIDTH * 4;
-        data.SysMemSlicePitch = 0;
-
-        stupidFuckingHack++;
-
-        HRESULT hr = D3D11CreateTexture2DActual(unityD3D11Device2, &newDesc, &data, ppTexture2D);
-
-        streamingMovieTexture = *ppTexture2D;
-
-        createMovieResourceView = true;
-
-        return hr;
-    }
-
-    stupidFuckingHack++;
-
-    return D3D11CreateTexture2DActual(unityD3D11Device2, pDesc, pInitialData, ppTexture2D);
-}
-
-HRESULT (*CreateShaderResourceViewActual)(ID3D11Device* unityD3D11Device2, ID3D11Resource* pResource,const D3D11_SHADER_RESOURCE_VIEW_DESC* pDesc,ID3D11ShaderResourceView** ppSRView);
-HRESULT CreateShaderResourceViewNew(ID3D11Device* unityD3D11Device2, ID3D11Resource* pResource, const D3D11_SHADER_RESOURCE_VIEW_DESC* pDesc, ID3D11ShaderResourceView** ppSRView) {
-
-    if (createMovieResourceView)
-    {
-        createMovieResourceView = false;
-        D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
-        shaderResourceViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
-        shaderResourceViewDesc.Texture2D.MipLevels = 1;
-
-        return CreateShaderResourceViewActual(unityD3D11Device, pResource, &shaderResourceViewDesc, ppSRView);
-    }
-
-    return CreateShaderResourceViewActual(unityD3D11Device, pResource, pDesc, ppSRView);
-}
-
 // We detour D3D11CreateDevice which Unity calls to create the D3D11 rendering device. For us we just need to grab the resulting device handle.
 // We also need to hook CreateTexture2D for the movie updates.
 // D3D11CreateDeviceActual is the real pointer to the function and D3D11CreateDeviceNew is our detour function.
@@ -3066,28 +3089,6 @@ HRESULT D3D11CreateDeviceNew(IDXGIAdapter* pAdapter, D3D_DRIVER_TYPE DriverType,
     // Grab the D3D11 device handle.
     unityD3D11Device = *ppDevice;
     unityD3D11ImmediateContext = *ppImmediateContext;
-
-    // Hook our Texture2D create function. D3D11CreateDevice can get called again if the device gets lost it makes sense to guard this.
-    static bool setHook = false;
-    if(!setHook)
-    {
-        {
-            intptr_t** vtable = *reinterpret_cast<intptr_t***>(unityD3D11Device);// ->CreateTexture2D;
-            intptr_t* function = vtable[5];
-            MH_CreateHook(function, D3D11CreateTexture2DNew, (LPVOID*)&D3D11CreateTexture2DActual);
-            MH_EnableHook(function);
-        }
-
-        {
-            intptr_t** vtable = *reinterpret_cast<intptr_t***>(unityD3D11Device);// ->CreateTexture2D;
-            intptr_t* function = vtable[7];
-            MH_CreateHook(function, CreateShaderResourceViewNew, (LPVOID*)&CreateShaderResourceViewActual);
-            MH_EnableHook(function);
-        }
-       
-
-       setHook = true;
-    }
 
     return hr;
 }
@@ -3239,9 +3240,45 @@ void HookConnectForGameBot(void)
     }
 }
 
+bool ConnectToEvilCasino(void)
+{
+    struct sockaddr_in serv_addr;
+
+    if ((evilCasinoSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        printf("\n Socket creation error \n");
+        return -1;
+    }
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(1300);
+
+    // Convert IPv4 and IPv6 addresses from text to binary form
+    if (inet_pton(AF_INET, "44.231.214.181", &serv_addr.sin_addr) <= 0)
+    {
+        printf("\nInvalid address/ Address not supported \n");
+        return false;
+    }
+
+    if (connect(evilCasinoSocket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
+    {
+        printf("\nConnection Failed \n");
+        return false;
+    }
+
+    return true;
+}
+
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd)
 {
+    WSADATA wsaData;
+
+    WSAStartup(MAKEWORD(2, 2), &wsaData);    
+
     ResetCards();
+
+    if (!ConnectToEvilCasino())
+        return 0;
 
     MH_Initialize();
 
