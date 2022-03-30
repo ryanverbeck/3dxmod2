@@ -134,6 +134,51 @@ const char *CamCards_t[] = {
     "Children | Shadows | Roller Coasters  | Planes \n",
 };
 
+const char* dareQuestionList[] = {
+    "Say something dirty to the person next to you",
+    "Roleplay a foot massage to the person next to you",
+    "Guess who has the biggest dick in the room",
+    "Guess who has the smallest dick in the room",
+    "Pick the hottest person you find here and say in world chat what position you would fuck them in.",
+    "Pick the person next to you and sayin world chat that they are your daddy.",
+    "Post your last five google searches.",
+    "Roleplay threeline porn scene with the person next to you",
+    "To take off all your clothes and do a quick strip tease in world chat describing how you would take off your underwear",
+    "Pick three people in the game and describe what position you would fuck each of them in.",
+    "Pick a sex pose with the person next to you and moan two lines of roleplay text.",
+    "To take off all your clothes and do a quick strip tease to the person next to you.",
+    "To masturbate on your square and do three lines of roleplay text.",
+    "Pick another player to blindfold you and handcuff you to the bed and do three lines of roleplay",
+    "Go into the character editor and switch your outfit into clothes you would wear to walmart.",
+    "Go to the person next to you and roleplay as if you were kissing their ass in three lines.",
+    "Compliment the two people closest to you",
+    "Suck on the finger of the player next to you and roleplay three lines.",
+    "Kiss a player next to you for one round.",
+    "Go to the player next to you and roleplay you flashing your chest to them in three lines.",
+    "Stand on your square and masturbate and roleplay as if you were fucking a celebrity of your choice in three lines",
+    "Roleplay removing a article of clothing from the player next to you using only your teeth.",
+    "Take any of piece of clothing off the person closest to you and roleplay three lines of it",
+    "Tell a dirty joke",
+    "Become the slave of another player of your choosing for one round.",
+    "Give the player next to you a body massage and give three lines of roleplay text.",
+    "Roleplay eating something off a player of your choosing naked body.",
+    "French kiss the players next to you belly button",
+    "Pick two players and kiss their gentials.",
+    "Point randomly to someone else in the room and that person will choose a piece of clothing to take off of you",
+    "Have a three way sex pose with two other players of your choosing",
+    "Yell out the first word that comes to your head.",
+    "Roleplay licking ice off the person next to you.",
+    "Roleplay a player here giving you a hickey anywhere on your body."
+    "Put on a blindfold and roleplay undressing another player of your choosing",
+    "Tell everyone the part of your body you find the sexiest.",
+    "Ask the person next to you what they think your dick or boobs look like in real life.",
+    "Go into worldchat and tell them you have the biggest penis in all of 3dx",
+    "Ask a random player to pick a player for you to make out with for 30 seconds",
+    "Choose any player and show them any are of your body in another room",
+    "Roleplay putting lipstick on another player oif your choice without using your hands.",
+    "Point randomly to someone else in the roomand that person will tell you say something sexual in world chat",
+};
+
 const char* truth2QuestionList[] = {
     "What is the most sensitive part of your body?",
     "What's a really good song to have crazy sexy too?",
@@ -2241,6 +2286,7 @@ int currentProcessChar = 0;
 const int numTruthEntries = sizeof(truthQuestionList) / sizeof(intptr_t);
 const int numTruth2Entries = sizeof(truth2QuestionList) / sizeof(intptr_t);
 const int numResponseCards = sizeof(responseCard) / sizeof(intptr_t);
+const int numDareEntries = sizeof(dareQuestionList) / sizeof(intptr_t);
 
 const int numCamCards = (sizeof(CamCards_t) / 5) / sizeof(intptr_t);
 
@@ -2265,6 +2311,9 @@ const char* card_types[] = {
 };
 
 std::vector<BlackJackCard_t> blackJackList;
+
+#define MAX_RANDOM_DARE_LIST   30
+std::vector<int> dareList[MAX_RANDOM_DARE_LIST];
 
 int currentTruthCard = 0;
 int currentTruth2Card = 0;
@@ -2294,23 +2343,38 @@ struct CardStorage_t {
     const char* card5;
 };
 
+struct DareInfo_t {
+    DareInfo_t()
+    {
+        currentDareTable = 0;
+        currentCardDare = 0;
+    }
+
+    int currentDareTable;
+    int currentCardDare;
+};
+
 std::unordered_map<std::string, std::string> blackJackStorage;
 std::unordered_map<std::string, int> blackJackAmt1;
 std::unordered_map<std::string, int> blackJackAmt2;
 std::unordered_map<std::string, CardStorage_t> blackJackPlayerCards;
 
+std::unordered_map<std::string, DareInfo_t> dareInfoTable;
+
 char ticTacBoard[5][5];
+
+int currentDareTable = 0;
 
 SOCKET evilCasinoSocket;
 void WriteToEvilCasino(const char* player_name, const char* card1, const char* card2, const char* card3, const char* card4, const char* card5)
 {
-    char temp[512];
-
-    memset(temp, 0, sizeof(temp));
-
-    sprintf(temp, "%s %s %s %s %s %s", player_name, card1, card2, card3, card4, card5);
-
-    send(evilCasinoSocket, temp, strlen(temp) + 1, 0);
+   // char temp[512];
+   //
+   // memset(temp, 0, sizeof(temp));
+   //
+   // sprintf(temp, "%s %s %s %s %s %s", player_name, card1, card2, card3, card4, card5);
+   //
+   // send(evilCasinoSocket, temp, strlen(temp) + 1, 0);
 }
 
 void ResetCards(void)
@@ -2333,6 +2397,13 @@ void ResetCards(void)
     blackJackAmt1.clear();
     blackJackAmt2.clear();
     blackJackPlayerCards.clear();
+
+    currentDareTable = 0;
+
+    for (int i = 0; i < MAX_RANDOM_DARE_LIST; i++)
+    {
+        dareList[i].clear();
+    }
 
     for (int g = 0; g < 7; g++) // 7 decks
     {
@@ -2361,6 +2432,10 @@ void ResetCards(void)
         }
     }
 
+    for (int d = 0; d < MAX_RANDOM_DARE_LIST; d++)
+        for (int i = 0; i < numDareEntries; i++)
+            dareList[d].push_back(i);
+
     for (int i = 0; i < numTruthEntries; i++)
         truthCardList.push_back(i);
 
@@ -2372,6 +2447,12 @@ void ResetCards(void)
 
     for (int i = 0; i < numCamCards; i++)
         camCardList.push_back(i);
+
+    for (int d = 0; d < MAX_RANDOM_DARE_LIST; d++)
+    {
+        std::mt19937 g(rd());
+        std::shuffle(dareList[d].begin(), dareList[d].end(), g);
+    }
 
     {
         std::mt19937 g(rd());
@@ -2755,9 +2836,7 @@ void ProcessBotCommand(const char* str, const char* playerName)
         static std::string bstring;
 
         if (parms.size() != 2)
-            return;
-
-        bstring = "/me ";
+            return;     
 
         if (currentBlackJackCard >= blackJackList.size() - 15)
             ResetCards();
@@ -2765,23 +2844,30 @@ void ProcessBotCommand(const char* str, const char* playerName)
         currentBotCommand = BOT_COMMAND_TRUTH;
         currentProcessChar = 0;
 
-        bstring += " AI DEALER has ";
-
-        blackJackAmt1["aidealer"] = 0;
-        blackJackAmt2["aidealer"] = 0;
         
+       
         if (atoi(parms[1].c_str()) == 0)
         {
-            DealCard(playerName, bstring, &blackJackAmt1["aidealer"], &blackJackAmt2["aidealer"], false);
+            bstring = "/me ";
+            bstring += " AI DEALER has ";
+
+            blackJackAmt1["aidealer"] = 0;
+            blackJackAmt2["aidealer"] = 0;            
+            DealCard(playerName, bstring, &blackJackAmt1["aidealer"], &blackJackAmt2["aidealer"], false);            
         }
         else
         {
+            bstring = blackJackStorage["aidealer"];
+            bstring += " ";
+
             while (blackJackAmt1["aidealer"] < 17 && blackJackAmt2["aidealer"] < 17)
             {
                 DealCard(playerName, bstring, &blackJackAmt1["aidealer"], &blackJackAmt2["aidealer"], false);
                 bstring += " ";
             }            
         }
+
+        blackJackStorage["aidealer"] = bstring;
 
         AddBlackjackHand(bstring, "aidealer");
 
@@ -2931,6 +3017,37 @@ void ProcessBotCommand(const char* str, const char* playerName)
 
         truthMessage = lastCardStr.c_str();
             
+        return;
+    }
+
+    if (parms[0] == "#dare") {
+        if (dareInfoTable[playerName].currentDareTable == 0)
+        {
+            dareInfoTable[playerName].currentDareTable = currentDareTable + 1;
+            dareInfoTable[playerName].currentCardDare = 0;
+            currentDareTable++;
+
+            if (currentDareTable >= MAX_RANDOM_DARE_LIST)
+                currentDareTable = 0;
+        }
+
+        static std::string dareResponse;
+
+        dareResponse = "DARE for ";
+        dareResponse += playerName;
+        dareResponse += ": ";
+
+        if (dareInfoTable[playerName].currentCardDare >= numDareEntries)
+            dareInfoTable[playerName].currentCardDare = 0;
+
+        currentProcessingNum = dareList[dareInfoTable[playerName].currentDareTable - 1][dareInfoTable[playerName].currentCardDare++];
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+
+        dareResponse += dareQuestionList[currentProcessingNum];
+
+        truthMessage = dareResponse.c_str();
+
         return;
     }
 
@@ -3277,8 +3394,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
     ResetCards();
 
-    if (!ConnectToEvilCasino())
-        return 0;
+  //  if (!ConnectToEvilCasino())
+  //      return 0;
 
     MH_Initialize();
 
