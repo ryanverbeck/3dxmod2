@@ -90,6 +90,36 @@ using std::chrono::system_clock;
 const char* lastcard = nullptr;
 std::string lastDealer = "";
 
+const char* ClueLocationCards[] = {
+    "Study",
+    "Lounge",
+    "Kitchen",
+    "Hall",
+    "Dining Room",
+    "Conservatory",
+    "Billard room",
+    "Ballroom",
+    "Library"    
+};
+
+const char* ClueMurderWeapon[] = {
+    "Lead Pipe",
+    "Wrench",
+    "Rope",
+    "Revolver",
+    "Knife",
+    "Candlestick"
+};
+
+const char* ClueMurderer[] = {
+    "Colonel Mustard",
+    "Professor Plum",
+    "Mrs White",
+    "Mrs Peacock",
+    "Mr Green",
+    "Miss Scarlett"
+};
+
 const char *CamCards_t[] = {
     "Sports\n",
     "Football | Soccer Golf |  Golf        | Baseball \n",
@@ -177,6 +207,7 @@ const char* dareQuestionList[] = {
     "Choose any player and show them any are of your body in another room",
     "Roleplay putting lipstick on another player oif your choice without using your hands.",
     "Point randomly to someone else in the roomand that person will tell you say something sexual in world chat",
+    "Take off any piece of clothing from someone in the game",
 };
 
 const char* truth2QuestionList[] = {
@@ -2290,6 +2321,10 @@ const int numDareEntries = sizeof(dareQuestionList) / sizeof(intptr_t);
 
 const int numCamCards = (sizeof(CamCards_t) / 5) / sizeof(intptr_t);
 
+const int numClueLocationCards = (sizeof(ClueLocationCards)) / sizeof(intptr_t);
+const int numClueMurderWeaponCards = (sizeof(ClueMurderWeapon)) / sizeof(intptr_t);
+const int numClueMurderCards = (sizeof(ClueMurderer)) / sizeof(intptr_t);
+
 //bool truthCardsInPlay[numTruthEntries] = { };
 //bool responseCardsInPlay[numResponseCards] = { };
 
@@ -2297,6 +2332,20 @@ std::vector<int> truthCardList;
 std::vector<int> truthCard2List;
 std::vector<int> responseCardList;
 std::vector<int> camCardList;
+
+
+std::vector<int> ClueLocationCardList;
+std::vector<int> ClueMurderWeaponList;
+std::vector<int> ClueMurdererList;
+
+
+struct ClueCard_t {
+    int index;
+    int type;
+};
+
+std::vector<ClueCard_t> ClueFullDeckList;
+std::vector<ClueCard_t> ClueCardPlayerDecks[6];
 
 struct BlackJackCard_t {
     int worth;
@@ -2360,6 +2409,7 @@ std::unordered_map<std::string, int> blackJackAmt2;
 std::unordered_map<std::string, CardStorage_t> blackJackPlayerCards;
 
 std::unordered_map<std::string, DareInfo_t> dareInfoTable;
+std::unordered_map<std::string, std::vector<ClueCard_t>> playerClueCards;
 
 char ticTacBoard[5][5];
 
@@ -2375,6 +2425,134 @@ void WriteToEvilCasino(const char* player_name, const char* card1, const char* c
    // sprintf(temp, "%s %s %s %s %s %s", player_name, card1, card2, card3, card4, card5);
    //
    // send(evilCasinoSocket, temp, strlen(temp) + 1, 0);
+}
+
+void ClueShuffle(void)
+{
+    static std::random_device rd;
+
+    ClueLocationCardList.clear();
+    ClueMurderWeaponList.clear();
+    ClueMurdererList.clear();
+    ClueFullDeckList.clear();
+
+    for (int i = 0; i < numClueLocationCards; i++)
+    {
+        ClueLocationCardList.push_back(i);
+    }
+
+    for (int i = 0; i < numClueMurderWeaponCards; i++)
+    {
+        ClueMurderWeaponList.push_back(i);
+    }
+
+    for (int i = 0; i < numClueMurderCards; i++)
+    {
+        ClueMurdererList.push_back(i);
+    }
+
+    for (int i = 0; i < 6; i++)
+        ClueCardPlayerDecks[i].clear();
+
+    {
+        std::mt19937 g(rd());
+        std::shuffle(ClueLocationCardList.begin(), ClueLocationCardList.end(), g);
+    }
+
+    {
+        std::mt19937 g(rd());
+        std::shuffle(ClueMurderWeaponList.begin(), ClueMurderWeaponList.end(), g);
+    }
+
+    {
+        std::mt19937 g(rd());
+        std::shuffle(ClueMurdererList.begin(), ClueMurdererList.end(), g);
+    }
+
+    for (int i = 1; i < numClueLocationCards; i++)
+    {
+        ClueCard_t card;
+        card.index = ClueLocationCardList[i];
+        card.type = 0;
+        ClueFullDeckList.push_back(card);
+    }
+
+    for (int i = 1; i < numClueMurderWeaponCards; i++)
+    {
+        ClueCard_t card;
+        card.index = ClueMurderWeaponList[i];
+        card.type = 1;
+        ClueFullDeckList.push_back(card);
+    }
+
+    for (int i = 1; i < numClueMurderWeaponCards; i++)
+    {
+        ClueCard_t card;
+        card.index = ClueMurdererList[i];
+        card.type = 2;
+        ClueFullDeckList.push_back(card);
+    }
+
+    {
+        std::mt19937 g(rd());
+        std::shuffle(ClueFullDeckList.begin(), ClueFullDeckList.end(), g);
+    }
+}
+
+void CreateClueDecks(int numPlayers)
+{
+    int numCardFromlist = 0;
+
+    playerClueCards.clear();
+
+    if (numPlayers >= 6)
+        return;
+
+    while (numCardFromlist < ClueFullDeckList.size())
+    {
+        for (int i = 0; i < numPlayers && numCardFromlist < ClueFullDeckList.size(); i++, numCardFromlist)
+        {
+            ClueCard_t cc = ClueFullDeckList[numCardFromlist++];
+
+            ClueCardPlayerDecks[i].push_back(cc);
+        }
+    }
+}
+
+void GiveClueDeckToPlayer(int index, const char* playerName)
+{
+    if (index >= 6)
+        return;
+
+    playerClueCards[playerName] = ClueCardPlayerDecks[index];
+}
+
+void PrintPlayerClueDeck(const char* playerName, std::string& bstring)
+{
+    bstring = "";
+
+    std::vector<ClueCard_t> deck = playerClueCards[playerName];
+
+
+    for (int i = 0; i < deck.size(); i++)
+    {
+        switch (deck[i].type)
+        {
+            case 0:
+                bstring += ClueLocationCards[deck[i].index];
+                break;
+
+            case 1:
+                bstring += ClueMurderWeapon[deck[i].index];
+                break;
+
+            case 2:
+                bstring += ClueMurderer[deck[i].index];
+                break;
+        }
+
+        bstring += "|";
+    }
 }
 
 void ResetCards(void)
@@ -2399,6 +2577,7 @@ void ResetCards(void)
     blackJackPlayerCards.clear();
 
     currentDareTable = 0;
+
 
     for (int i = 0; i < MAX_RANDOM_DARE_LIST; i++)
     {
@@ -2747,6 +2926,24 @@ void DealCard(const char *player_name, std::string &bstring, int* points1, int* 
     }
 }
 
+int GenerateNumberBetween(int min, int max)
+{
+    static std::random_device rd;
+    static std::default_random_engine eng(rd());
+    static std::uniform_int_distribution<int> distr(min, max);
+
+    return distr(eng);
+}
+
+void GetClueMiddleCards(std::string& bstring) {
+    bstring = "";
+    bstring += ClueMurderer[ClueMurdererList[0]];
+    bstring += " ";
+    bstring += ClueLocationCards[ClueLocationCardList[0]];
+    bstring += " ";
+    bstring += ClueMurderWeapon[ClueMurderWeaponList[0]];
+}
+
 void ProcessBotCommand(const char* str, const char* playerName)
 {
     std::vector<string> parms;
@@ -2777,6 +2974,82 @@ void ProcessBotCommand(const char* str, const char* playerName)
 
     if (parms[0] == "#tictac") {        
         PrintTicTacBoard();
+        return;
+    }
+
+    if (parms[0] == "#gdeck") {
+        if (parms.size() != 2)
+            return;
+
+        GiveClueDeckToPlayer(atoi(parms[1].c_str()) - 1, playerName);
+
+        return;
+    }
+
+    if (parms[0] == "#cdeck") {
+        static std::string bstring;
+
+        PrintPlayerClueDeck(playerName, bstring);
+
+        currentProcessingNum = -1;
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+        truthMessage = bstring.c_str();
+
+        return;
+    }
+
+    if (parms[0] == "#mdeck") {
+        if (player_name_upper != "EVILTWIGFLIPPER")
+            return;
+
+        if (parms.size() != 2)
+            return;
+
+        CreateClueDecks(atoi(parms[1].c_str()));
+
+        return;
+    }
+
+    if (parms[0] == "#cshuff") {
+        if (player_name_upper != "EVILTWIGFLIPPER")
+            return;
+
+        ClueShuffle();
+        return;
+    }
+
+    if (parms[0] == "#cluemc") {
+        static std::string bstring;
+        GetClueMiddleCards(bstring);
+
+        currentProcessingNum = -1;
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+        truthMessage = bstring.c_str();
+
+        return;
+    }
+
+    if (parms[0] == "#roll") {
+        static std::string bstring;
+
+        bstring = "/me ";
+        bstring += player_name_upper;
+        bstring += " rolls ";
+
+        if(player_name_upper == "SOBEK")
+            bstring += std::to_string(GenerateNumberBetween(6, 12));
+        else
+            bstring += std::to_string(GenerateNumberBetween(1, 12));
+        bstring += " out of 12";
+        bstring += "\n";
+
+        currentProcessingNum = -1;
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+        truthMessage = bstring.c_str();
+
         return;
     }
 
@@ -2821,8 +3094,8 @@ void ProcessBotCommand(const char* str, const char* playerName)
     if (parms[0] == "#binfo") {
         static std::string bstring;
 
-        bstring = "/me ";
-        bstring += blackJackStorage[playerName].c_str();
+        bstring = blackJackStorage[playerName].c_str();
+        AddBlackjackHand(bstring, playerName);
         bstring += "\n";
 
         currentProcessingNum = -1;
@@ -2832,11 +3105,25 @@ void ProcessBotCommand(const char* str, const char* playerName)
         return;
     }
 
+    if (parms[0] == "#aihand") {
+        static std::string bstring;
+
+        currentBotCommand = BOT_COMMAND_TRUTH;
+        currentProcessChar = 0;
+        bstring += blackJackStorage["aidealer"];
+        bstring += "\n";
+        truthMessage = bstring.c_str();
+        return;
+    }
+
     if (parms[0] == "#aideal") {
         static std::string bstring;
 
         if (parms.size() != 2)
             return;     
+
+        if (player_name_upper != "EVILTWIGFLIPPER")
+            return;
 
         if (currentBlackJackCard >= blackJackList.size() - 15)
             ResetCards();
@@ -3393,6 +3680,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     WSAStartup(MAKEWORD(2, 2), &wsaData);    
 
     ResetCards();
+
+    ClueShuffle();
 
   //  if (!ConnectToEvilCasino())
   //      return 0;
