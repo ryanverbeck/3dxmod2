@@ -92,9 +92,9 @@ std::string lastDealer = "";
 
 const char* ClueLocationCards[] = {
     "Study",
-    "Lounge",
+    "Bathroom",
     "Kitchen",
-    "Hall",
+    "Courtyard",
     "Dining Room",
     "Conservatory",
     "Billard room",
@@ -2942,6 +2942,7 @@ void GetClueMiddleCards(std::string& bstring) {
     bstring += ClueLocationCards[ClueLocationCardList[0]];
     bstring += " ";
     bstring += ClueMurderWeapon[ClueMurderWeaponList[0]];
+    bstring += "\n";
 }
 
 void ProcessBotCommand(const char* str, const char* playerName)
